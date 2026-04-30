@@ -8,7 +8,7 @@ Click an element → copy `[xPathInfo] Route, XPath, CSS, React` to clipboard.
 
 Pick one. The Prompt tab is the default — your AI agent does the wiring for you.
 
-### [Prompt 방식 (기본)]
+### [Prompt (Default)]
 
 Paste this prompt into Claude Code, Cursor, Codex, or any AI coding agent that has shell + filesystem access in your project. It will install and wire `react-path-picker` for you — no copy-pasting snippets.
 
@@ -36,7 +36,7 @@ That's it — your agent reads this repo and handles the rest.
 
 ---
 
-### [Manual 방식 (옵션)]
+### [Manual (Optional)]
 
 <sub>Prefer to wire it up by hand? Pick the router you're using.</sub>
 
