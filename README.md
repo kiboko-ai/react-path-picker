@@ -4,13 +4,37 @@ Dev-only DOM inspector for React/Next.js apps.
 
 Click an element → copy `[xPathInfo] Route, XPath, CSS, React` to clipboard.
 
-## Install
+## Quick Start: Agentic Coding (Vibe Coding)
+
+Paste this prompt into Claude Code, Cursor, Codex, or any AI coding agent that has shell + filesystem access in your project. It will install and wire `react-path-picker` for you — no copy-pasting snippets.
+
+````
+Install and wire up react-path-picker into this project.
+Repo: https://github.com/kiboko-ai/react-path-picker
+
+Steps:
+1. Detect the framework (Next.js App Router, Pages Router, or React with React Router / Vite).
+2. Install the package: `npm install react-path-picker`.
+3. Create a dev-only `DevPathPicker` component that uses `PathPickerButton` from `react-path-picker`.
+   Pass the current pathname via the framework's router hook
+   (`usePathname` for Next.js App Router, `useRouter().pathname` for Pages Router,
+   or `useLocation().pathname` for React Router).
+4. Gate it on development (`process.env.NODE_ENV !== 'production'` or `!import.meta.env.PROD`)
+   so it never renders in production.
+5. Mount it once at the root (`app/layout.tsx`, `pages/_app.tsx`, or `App.tsx`) so the inspector
+   button shows on every page.
+6. Run the project's typecheck/build (e.g. `npm run typecheck`) and fix any issues.
+
+Do not modify production code paths or render the picker in production builds.
+````
+
+That's it — your agent reads this repo and handles the rest.
+
+## Optional: Manual setup
 
 ```bash
 npm install react-path-picker
 ```
-
-## Quick Start
 
 ### Next.js (App Router)
 

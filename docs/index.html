@@ -138,18 +138,27 @@
         Stop describing UI elements to your AI agent. Click, copy the exact XPath &amp; CSS selector, paste. Your agent gets it instantly.
       </p>
 
-      <!-- Install command -->
-      <div class="flex flex-col sm:flex-row items-center justify-center gap-4 mb-10">
-        <div class="flex items-center bg-pp-surface border border-slate-600 rounded-lg pl-4 pr-2 py-2.5 font-mono text-sm">
+      <!-- PRIMARY CTA: AI prompt -->
+      <div class="flex flex-col items-center gap-3 mb-6">
+        <a href="#quickstart" class="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-br from-pp to-pp-light text-white text-sm font-semibold rounded-lg shadow-lg shadow-pp/30 hover:opacity-90 transition">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+          Get the AI agent prompt
+        </a>
+        <p class="text-xs text-slate-500 text-center max-w-md">Paste it into Claude Code, Cursor, or Codex — it installs &amp; wires <code class="text-pp-light font-mono">react-path-picker</code> for you.</p>
+      </div>
+
+      <!-- SECONDARY: manual install command -->
+      <div class="flex flex-col sm:flex-row items-center justify-center gap-3 mb-10">
+        <div class="flex items-center bg-pp-surface border border-slate-600 rounded-lg pl-3 pr-2 py-2 font-mono text-xs">
           <span class="text-slate-500 mr-2">$</span>
           <span class="text-pp-light">npm install react-path-picker</span>
-          <button onclick="copyText('npm install react-path-picker', this)" class="copy-btn ml-3 px-2 py-1 rounded text-xs text-slate-400 hover:text-white border border-slate-600">
+          <button onclick="copyText('npm install react-path-picker', this)" class="copy-btn ml-3 px-2 py-0.5 rounded text-xs text-slate-400 hover:text-white border border-slate-600">
             Copy
           </button>
         </div>
-        <a href="https://github.com/kiboko-ai/react-path-picker" target="_blank" rel="noopener" class="flex items-center gap-2 px-5 py-2.5 rounded-lg border border-slate-600 text-sm text-slate-300 hover:border-pp hover:text-white transition">
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
-          View on GitHub
+        <a href="https://github.com/kiboko-ai/react-path-picker" target="_blank" rel="noopener" class="flex items-center gap-2 px-3 py-2 rounded-lg border border-slate-600 text-xs text-slate-300 hover:border-pp hover:text-white transition">
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+          GitHub
         </a>
       </div>
 
@@ -315,7 +324,40 @@
   <section id="quickstart" class="py-20 px-4">
     <div class="max-w-4xl mx-auto">
       <h2 class="text-3xl font-bold text-white text-center mb-4">Quick Start</h2>
-      <p class="text-slate-400 text-center mb-10">Pick the router you're using.</p>
+      <p class="text-slate-400 text-center mb-10 max-w-2xl mx-auto">Let your AI agent install and wire <code class="text-pp-light font-mono text-sm">react-path-picker</code>. Paste the prompt below into Claude Code, Cursor, or Codex — no copy-pasting snippets.</p>
+
+      <!-- VIBE CODING PROMPT (PRIMARY) -->
+      <div class="mb-14">
+        <div class="flex items-center justify-between gap-2 mb-2">
+          <span class="text-xs font-mono text-slate-500 uppercase tracking-wider">Prompt for Claude Code / Cursor / Codex</span>
+          <button onclick="copyCodeBlock(this)" class="copy-btn text-xs px-3 py-1 rounded text-slate-200 border border-pp/50 bg-pp/10 hover:bg-pp/20">Copy prompt</button>
+        </div>
+        <pre><code class="language-markup">Install and wire up react-path-picker into this project.
+Repo: https://github.com/kiboko-ai/react-path-picker
+
+Steps:
+1. Detect the framework (Next.js App Router, Pages Router, or React with React Router / Vite).
+2. Install the package: `npm install react-path-picker`.
+3. Create a dev-only `DevPathPicker` component that uses `PathPickerButton` from `react-path-picker`.
+   Pass the current pathname via the framework's router hook
+   (`usePathname` for Next.js App Router, `useRouter().pathname` for Pages Router,
+   or `useLocation().pathname` for React Router).
+4. Gate it on development (`process.env.NODE_ENV !== 'production'` or `!import.meta.env.PROD`)
+   so it never renders in production.
+5. Mount it once at the root (`app/layout.tsx`, `pages/_app.tsx`, or `App.tsx`) so the
+   inspector button shows on every page.
+6. Run the project's typecheck/build (e.g. `npm run typecheck`) and fix any issues.
+
+Do not modify production code paths or render the picker in production builds.</code></pre>
+        <p class="text-xs text-slate-500 mt-3 text-center">Works with any AI coding agent that has shell &amp; filesystem access.</p>
+      </div>
+
+      <!-- OPTIONAL: MANUAL SETUP -->
+      <div class="border-t border-slate-700 pt-10">
+        <div class="text-center mb-6">
+          <h3 class="text-xl font-semibold text-white mb-1">Optional: Manual setup</h3>
+          <p class="text-sm text-slate-500">Prefer to wire it up by hand? Pick the router you're using.</p>
+        </div>
 
       <!-- Framework tabs -->
       <div class="flex flex-wrap gap-2 mb-6 justify-center">
@@ -402,6 +444,7 @@ export function DevPathPicker() {
   return &lt;PathPickerButton pathname={location.pathname} /&gt;;
 }</code></pre>
         </div>
+      </div>
       </div>
     </div>
   </section>
