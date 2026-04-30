@@ -13,7 +13,6 @@ The page covers:
 - **Features** — XPath, CSS selector, React component detection, framework-agnostic core.
 - **Quick Start** — tabbed snippets for Next.js App Router, Next.js Pages Router, and React Router.
 - **Core API** — vanilla TS snippet using `PathPickerInspector`, `getXPath`, `getCssSelector`, plus a compact export reference table.
-- **Publish checklist** — version → typecheck/test/build → `npm pack --dry-run` → `npm publish --access public` → push tags.
 
 ## View locally
 
