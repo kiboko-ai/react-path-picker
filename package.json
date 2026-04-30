@@ -1,0 +1,79 @@
+{
+  "name": "react-path-picker",
+  "version": "0.1.0",
+  "description": "Click any DOM element and copy its XPath, CSS selector, route, and React component info to the clipboard. Tiny dev tool with React hook and button, framework-agnostic core.",
+  "keywords": [
+    "react",
+    "xpath",
+    "css-selector",
+    "devtools",
+    "inspector",
+    "picker",
+    "react-fiber",
+    "dev-tool"
+  ],
+  "author": "react-path-picker contributors",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kiboko-ai/react-path-picker.git"
+  },
+  "homepage": "https://github.com/kiboko-ai/react-path-picker#readme",
+  "bugs": {
+    "url": "https://github.com/kiboko-ai/react-path-picker/issues"
+  },
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    },
+    "./core": {
+      "types": "./dist/core.d.ts",
+      "import": "./dist/core.js",
+      "require": "./dist/core.cjs"
+    },
+    "./package.json": "./package.json"
+  },
+  "sideEffects": false,
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "prepublishOnly": "npm run typecheck && npm run test && npm run build"
+  },
+  "peerDependencies": {
+    "react": ">=18"
+  },
+  "peerDependenciesMeta": {
+    "react": {
+      "optional": false
+    }
+  },
+  "devDependencies": {
+    "@types/node": "^20.12.7",
+    "@types/react": "^18.3.3",
+    "jsdom": "^24.0.0",
+    "react": "^18.3.1",
+    "tsup": "^8.0.2",
+    "typescript": "^5.4.5",
+    "vitest": "^1.6.0"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

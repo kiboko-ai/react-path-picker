@@ -1,0 +1,9 @@
+# npm publish exclusions
+node_modules
+src
+test
+.vscode
+.idea
+*.log
+coverage
+*.tsbuildinfo
