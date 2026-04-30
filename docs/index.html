@@ -1,0 +1,636 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>react-path-picker — DOM Inspector for React &amp; Next.js</title>
+  <meta name="description" content="Click any element. Get its XPath, CSS selector, and React component — instantly. A dev-only DOM inspector for React/Next.js apps." />
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            pp: { DEFAULT: '#329D9C', light: '#56C596', dark: '#0f172a', surface: '#1e293b', muted: '#94a3b8' },
+          },
+          fontFamily: { mono: ['JetBrains Mono', 'Fira Code', 'monospace'] },
+        },
+      },
+    };
+  </script>
+
+  <!-- Prism.js (One Dark Pro / Tomorrow theme) -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" />
+  <script>window.Prism = window.Prism || {}; Prism.manual = true;</script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-markup.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-javascript.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-typescript.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-jsx.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-tsx.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-bash.min.js"></script>
+
+  <style>
+    html { scroll-behavior: smooth; }
+    body { background: linear-gradient(180deg, #0f172a 0%, #1e293b 100%); min-height: 100vh; }
+
+    pre[class*="language-"], code[class*="language-"] {
+      font-family: 'JetBrains Mono', 'Fira Code', monospace;
+      font-size: 13px;
+    }
+    pre[class*="language-"] {
+      background: #0f172a !important;
+      border: 1px solid #334155;
+      border-radius: 12px;
+      padding: 1.25rem;
+      margin: 0;
+    }
+
+    .copy-btn { transition: all 0.2s; }
+    .copy-btn:hover { background: rgba(50,157,156,0.2) !important; }
+    .copy-btn.copied { background: rgba(86,197,150,0.2) !important; color: #56C596 !important; }
+
+    .tab-btn { transition: all 0.2s; }
+    .tab-btn.active { background: #329D9C; color: #fff; border-color: #329D9C; }
+    .tab-btn:not(.active):hover { background: rgba(50,157,156,0.15); }
+
+    .feature-card { transition: all 0.25s; }
+    .feature-card:hover { border-color: #329D9C; transform: translateY(-2px); }
+
+    .gradient-text {
+      background: linear-gradient(135deg, #329D9C, #56C596);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    pre::-webkit-scrollbar { height: 6px; }
+    pre::-webkit-scrollbar-track { background: transparent; }
+    pre::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
+
+    /* Demo flow connector arrow on md+ */
+    @media (min-width: 768px) {
+      .flow-arrow {
+        position: absolute;
+        right: -12px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #334155;
+      }
+    }
+  </style>
+</head>
+
+<body class="text-slate-300 font-sans antialiased">
+
+  <!-- ========== NAV ========== -->
+  <nav class="fixed top-0 left-0 right-0 z-50 backdrop-blur-md bg-pp-dark/80 border-b border-slate-700/50">
+    <div class="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between">
+      <a href="#hero" class="flex items-center gap-2 text-white font-semibold text-sm">
+        <svg width="20" height="20" viewBox="0 0 16 16" fill="none" stroke="#329D9C" stroke-width="1.5">
+          <circle cx="8" cy="8" r="5.5"/>
+          <circle cx="8" cy="8" r="1.5" fill="#329D9C" stroke="none"/>
+          <line x1="8" y1="0" x2="8" y2="3"/>
+          <line x1="8" y1="13" x2="8" y2="16"/>
+          <line x1="0" y1="8" x2="3" y2="8"/>
+          <line x1="13" y1="8" x2="16" y2="8"/>
+        </svg>
+        react-path-picker
+      </a>
+      <div class="hidden sm:flex items-center gap-6 text-sm text-slate-400">
+        <a href="#demo" class="hover:text-white transition">Demo</a>
+        <a href="#features" class="hover:text-white transition">Features</a>
+        <a href="#quickstart" class="hover:text-white transition">Quick Start</a>
+        <a href="#api" class="hover:text-white transition">API</a>
+        <a href="#publish" class="hover:text-white transition">Publish</a>
+        <a href="https://github.com/kiboko-ai/react-path-picker" target="_blank" rel="noopener" class="hover:text-white transition flex items-center gap-1">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+          GitHub
+        </a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- ========== HERO ========== -->
+  <section id="hero" class="pt-32 pb-20 px-4">
+    <div class="max-w-4xl mx-auto text-center">
+      <div class="flex justify-center mb-8">
+        <div class="w-20 h-20 rounded-2xl bg-gradient-to-br from-pp to-pp-light flex items-center justify-center shadow-lg shadow-pp/20">
+          <svg width="40" height="40" viewBox="0 0 16 16" fill="none" stroke="#fff" stroke-width="1.2">
+            <circle cx="8" cy="8" r="5.5"/>
+            <circle cx="8" cy="8" r="1.5" fill="#fff" stroke="none"/>
+            <line x1="8" y1="0" x2="8" y2="3"/>
+            <line x1="8" y1="13" x2="8" y2="16"/>
+            <line x1="0" y1="8" x2="3" y2="8"/>
+            <line x1="13" y1="8" x2="16" y2="8"/>
+          </svg>
+        </div>
+      </div>
+
+      <h1 class="text-4xl sm:text-5xl lg:text-6xl font-bold text-white mb-6 leading-tight">
+        One click saves<br/>
+        <span class="gradient-text">a thousand tokens.</span>
+      </h1>
+
+      <p class="text-lg sm:text-xl text-slate-400 mb-10 max-w-2xl mx-auto">
+        Stop describing UI elements to your AI agent. Click, copy the exact XPath &amp; CSS selector, paste. Your agent gets it instantly.
+      </p>
+
+      <!-- Install command -->
+      <div class="flex flex-col sm:flex-row items-center justify-center gap-4 mb-10">
+        <div class="flex items-center bg-pp-surface border border-slate-600 rounded-lg pl-4 pr-2 py-2.5 font-mono text-sm">
+          <span class="text-slate-500 mr-2">$</span>
+          <span class="text-pp-light">npm install react-path-picker</span>
+          <button onclick="copyText('npm install react-path-picker', this)" class="copy-btn ml-3 px-2 py-1 rounded text-xs text-slate-400 hover:text-white border border-slate-600">
+            Copy
+          </button>
+        </div>
+        <a href="https://github.com/kiboko-ai/react-path-picker" target="_blank" rel="noopener" class="flex items-center gap-2 px-5 py-2.5 rounded-lg border border-slate-600 text-sm text-slate-300 hover:border-pp hover:text-white transition">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+          View on GitHub
+        </a>
+      </div>
+
+      <!-- Output example -->
+      <div class="max-w-3xl mx-auto space-y-3">
+        <div class="bg-pp-dark border border-slate-700 rounded-xl p-4 text-left overflow-x-auto">
+          <div class="flex items-center gap-2 mb-2">
+            <span class="w-1.5 h-1.5 rounded-full bg-blue-400 inline-block"></span>
+            <span class="text-[10px] font-mono text-slate-500 uppercase tracking-wider">React / Next.js app</span>
+          </div>
+          <div class="font-mono text-xs sm:text-sm text-slate-400 whitespace-nowrap">
+            <span class="text-slate-500">[xPathInfo]</span>
+            <span class="text-slate-400"> Route:</span> <span class="text-pp-light">/dashboard</span><span class="text-slate-500">,</span>
+            <span class="text-slate-400"> XPath:</span> <span class="text-pp">/html/body/div[2]/main</span><span class="text-slate-500">,</span>
+            <span class="text-slate-400"> CSS:</span> <span class="text-pp">main.layout-content</span><span class="text-slate-500">,</span>
+            <span class="text-slate-400"> React:</span> <span class="text-pp-light">DashboardPage</span> <span class="text-slate-500">(app/dashboard/page.tsx)</span>
+          </div>
+        </div>
+        <div class="bg-pp-dark border border-slate-700/50 rounded-xl p-4 text-left overflow-x-auto">
+          <div class="flex items-center gap-2 mb-2">
+            <span class="w-1.5 h-1.5 rounded-full bg-pp inline-block"></span>
+            <span class="text-[10px] font-mono text-slate-500 uppercase tracking-wider">Any web page (core API)</span>
+          </div>
+          <div class="font-mono text-xs sm:text-sm text-slate-400 whitespace-nowrap">
+            <span class="text-slate-500">[xPathInfo]</span>
+            <span class="text-slate-400"> Route:</span> <span class="text-pp-light">/about</span><span class="text-slate-500">,</span>
+            <span class="text-slate-400"> XPath:</span> <span class="text-pp">//*[@id="hero"]/div/h1</span><span class="text-slate-500">,</span>
+            <span class="text-slate-400"> CSS:</span> <span class="text-pp">#hero &gt; div &gt; h1</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== LIVE DEMO USAGE FLOW ========== -->
+  <section id="demo" class="py-20 px-4">
+    <div class="max-w-5xl mx-auto">
+      <div class="text-center mb-12">
+        <h2 class="text-3xl font-bold text-white mb-4">How it works</h2>
+        <p class="text-slate-400 max-w-2xl mx-auto">
+          Three clicks. From mystery DOM node to a clipboard-ready
+          <code class="text-pp-light font-mono text-sm">[xPathInfo]</code> snippet your AI agent can paste straight into a fix.
+        </p>
+      </div>
+
+      <!-- Flow steps -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-10">
+        <div class="relative bg-pp-surface border border-slate-700 rounded-xl p-6">
+          <div class="flex items-center gap-3 mb-3">
+            <div class="w-8 h-8 rounded-lg bg-pp/20 flex items-center justify-center text-pp font-mono text-sm font-bold">1</div>
+            <p class="text-white font-semibold text-sm">Click the aim icon</p>
+          </div>
+          <p class="text-sm text-slate-400 mb-4">A small target icon sits fixed in the top-right of your dev build. Click it to arm the inspector.</p>
+          <div class="bg-pp-dark border border-slate-700 rounded-lg h-20 flex items-center justify-center">
+            <svg width="28" height="28" viewBox="0 0 16 16" fill="none" stroke="#329D9C" stroke-width="1.5">
+              <circle cx="8" cy="8" r="5.5"/>
+              <circle cx="8" cy="8" r="1.5" fill="#329D9C" stroke="none"/>
+              <line x1="8" y1="0" x2="8" y2="3"/>
+              <line x1="8" y1="13" x2="8" y2="16"/>
+              <line x1="0" y1="8" x2="3" y2="8"/>
+              <line x1="13" y1="8" x2="16" y2="8"/>
+            </svg>
+          </div>
+          <svg class="flow-arrow hidden md:block" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="9 6 15 12 9 18"/>
+          </svg>
+        </div>
+
+        <div class="relative bg-pp-surface border border-slate-700 rounded-xl p-6">
+          <div class="flex items-center gap-3 mb-3">
+            <div class="w-8 h-8 rounded-lg bg-pp/20 flex items-center justify-center text-pp font-mono text-sm font-bold">2</div>
+            <p class="text-white font-semibold text-sm">Hover any element</p>
+          </div>
+          <p class="text-sm text-slate-400 mb-4">An overlay highlights the element under your cursor with a tooltip showing the tag, classes, and detected component.</p>
+          <div class="bg-pp-dark border-2 border-dashed border-pp/60 rounded-lg h-20 flex items-center justify-center text-xs text-pp-light font-mono">
+            &lt;button&gt; · BuyButton
+          </div>
+          <svg class="flow-arrow hidden md:block" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="9 6 15 12 9 18"/>
+          </svg>
+        </div>
+
+        <div class="bg-pp-surface border border-slate-700 rounded-xl p-6">
+          <div class="flex items-center gap-3 mb-3">
+            <div class="w-8 h-8 rounded-lg bg-pp/20 flex items-center justify-center text-pp font-mono text-sm font-bold">3</div>
+            <p class="text-white font-semibold text-sm">Click to copy</p>
+          </div>
+          <p class="text-sm text-slate-400 mb-4">Route, XPath, CSS selector, and React component name &amp; source path land on your clipboard in one line.</p>
+          <div class="bg-pp-dark border border-pp/40 rounded-lg h-20 flex items-center justify-center text-xs text-pp-light font-mono">
+            &check; Copied to clipboard
+          </div>
+        </div>
+      </div>
+
+      <!-- Output comparison -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="bg-pp-dark border border-slate-700 rounded-xl p-4">
+          <div class="flex items-center gap-2 mb-3">
+            <span class="w-2 h-2 rounded-full bg-slate-500 inline-block"></span>
+            <span class="text-xs font-mono text-slate-400">Plain DOM (core API only)</span>
+          </div>
+          <div class="font-mono text-xs text-slate-400 leading-relaxed">
+            <span class="text-slate-500">[xPathInfo]</span> Route, XPath, CSS
+          </div>
+        </div>
+        <div class="bg-pp-dark border border-pp/30 rounded-xl p-4">
+          <div class="flex items-center gap-2 mb-3">
+            <span class="w-2 h-2 rounded-full bg-pp animate-pulse inline-block"></span>
+            <span class="text-xs font-mono text-pp">React / Next.js app</span>
+          </div>
+          <div class="font-mono text-xs text-slate-400 leading-relaxed">
+            <span class="text-slate-500">[xPathInfo]</span> Route, XPath, CSS + <span class="text-pp-light">React component &amp; source path</span>
+          </div>
+        </div>
+      </div>
+      <p class="text-xs text-slate-500 text-center mt-4">React component detection walks the Fiber tree at runtime. Source paths require a small dev-only loader (optional).</p>
+    </div>
+  </section>
+
+  <!-- ========== FEATURES ========== -->
+  <section id="features" class="py-20 px-4 bg-pp-dark/50">
+    <div class="max-w-6xl mx-auto">
+      <h2 class="text-3xl font-bold text-white text-center mb-4">Features</h2>
+      <p class="text-slate-400 text-center mb-12 max-w-xl mx-auto">Everything you need to inspect DOM elements during development — nothing you don't.</p>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div class="feature-card bg-pp-surface border border-slate-700 rounded-xl p-6">
+          <div class="w-10 h-10 rounded-lg bg-pp/10 flex items-center justify-center mb-4">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#329D9C" stroke-width="2"><path d="M4 4l7 9-7 9"/><line x1="12" y1="18" x2="20" y2="18"/></svg>
+          </div>
+          <h3 class="text-white font-semibold mb-2">Smart XPath</h3>
+          <p class="text-sm text-slate-400">ID shortcuts and SVG-boundary detection produce minimal, readable expressions.</p>
+        </div>
+
+        <div class="feature-card bg-pp-surface border border-slate-700 rounded-xl p-6">
+          <div class="w-10 h-10 rounded-lg bg-pp/10 flex items-center justify-center mb-4">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#329D9C" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+          </div>
+          <h3 class="text-white font-semibold mb-2">CSS Selector</h3>
+          <p class="text-sm text-slate-400">Unique selectors capped at 5 levels. Auto-filters Ant Design / emotion hash classes like <code class="text-pp text-xs">css-*</code>.</p>
+        </div>
+
+        <div class="feature-card bg-pp-surface border border-slate-700 rounded-xl p-6">
+          <div class="w-10 h-10 rounded-lg bg-pp/10 flex items-center justify-center mb-4">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#329D9C" stroke-width="2"><circle cx="12" cy="12" r="2.5"/><ellipse cx="12" cy="12" rx="10" ry="4"/><ellipse cx="12" cy="12" rx="10" ry="4" transform="rotate(60 12 12)"/><ellipse cx="12" cy="12" rx="10" ry="4" transform="rotate(120 12 12)"/></svg>
+          </div>
+          <h3 class="text-white font-semibold mb-2">React Component</h3>
+          <p class="text-sm text-slate-400">Walks the React Fiber tree to find the nearest user component name and (optionally) its source file.</p>
+        </div>
+
+        <div class="feature-card bg-pp-surface border border-slate-700 rounded-xl p-6">
+          <div class="w-10 h-10 rounded-lg bg-pp/10 flex items-center justify-center mb-4">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#329D9C" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+          </div>
+          <h3 class="text-white font-semibold mb-2">Framework-agnostic core</h3>
+          <p class="text-sm text-slate-400">Subpath import <code class="text-pp text-xs">react-path-picker/core</code> exposes <code class="text-pp text-xs">getXPath()</code>, <code class="text-pp text-xs">getCssSelector()</code>, and the inspector class — no React required.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== QUICK START ========== -->
+  <section id="quickstart" class="py-20 px-4">
+    <div class="max-w-4xl mx-auto">
+      <h2 class="text-3xl font-bold text-white text-center mb-4">Quick Start</h2>
+      <p class="text-slate-400 text-center mb-10">Pick the router you're using.</p>
+
+      <!-- Framework tabs -->
+      <div class="flex flex-wrap gap-2 mb-6 justify-center">
+        <button class="tab-btn active text-sm px-4 py-1.5 rounded-full border border-slate-600 text-slate-300" onclick="switchTab('nextjs-app', this)">Next.js App Router</button>
+        <button class="tab-btn text-sm px-4 py-1.5 rounded-full border border-slate-600 text-slate-300" onclick="switchTab('nextjs-pages', this)">Next.js Pages Router</button>
+        <button class="tab-btn text-sm px-4 py-1.5 rounded-full border border-slate-600 text-slate-300" onclick="switchTab('react-router', this)">React Router</button>
+      </div>
+
+      <!-- Next.js App Router -->
+      <div id="tab-nextjs-app" class="tab-content space-y-6">
+        <div>
+          <div class="flex items-center gap-2 mb-2">
+            <span class="text-xs font-mono text-slate-500">components/DevPathPicker.tsx</span>
+            <button onclick="copyCodeBlock(this)" class="copy-btn text-xs px-2 py-0.5 rounded text-slate-500 border border-slate-700">Copy</button>
+          </div>
+          <pre><code class="language-tsx">'use client';
+
+import { usePathname } from 'next/navigation';
+import { PathPickerButton } from 'react-path-picker';
+
+export default function DevPathPicker() {
+  const pathname = usePathname();
+  if (process.env.NODE_ENV !== 'development') return null;
+  return &lt;PathPickerButton pathname={pathname} /&gt;;
+}</code></pre>
+        </div>
+        <div>
+          <div class="flex items-center gap-2 mb-2">
+            <span class="text-xs font-mono text-slate-500">app/layout.tsx</span>
+            <button onclick="copyCodeBlock(this)" class="copy-btn text-xs px-2 py-0.5 rounded text-slate-500 border border-slate-700">Copy</button>
+          </div>
+          <pre><code class="language-tsx">import DevPathPicker from '@/components/DevPathPicker';
+
+export default function RootLayout({ children }) {
+  return (
+    &lt;html&gt;
+      &lt;body&gt;
+        &lt;DevPathPicker /&gt;
+        {children}
+      &lt;/body&gt;
+    &lt;/html&gt;
+  );
+}</code></pre>
+        </div>
+      </div>
+
+      <!-- Next.js Pages Router -->
+      <div id="tab-nextjs-pages" class="tab-content hidden space-y-6">
+        <div>
+          <div class="flex items-center gap-2 mb-2">
+            <span class="text-xs font-mono text-slate-500">pages/_app.tsx</span>
+            <button onclick="copyCodeBlock(this)" class="copy-btn text-xs px-2 py-0.5 rounded text-slate-500 border border-slate-700">Copy</button>
+          </div>
+          <pre><code class="language-tsx">import { useRouter } from 'next/router';
+import { PathPickerButton } from 'react-path-picker';
+
+export default function App({ Component, pageProps }) {
+  const router = useRouter();
+  return (
+    &lt;&gt;
+      {process.env.NODE_ENV === 'development' &amp;&amp; (
+        &lt;PathPickerButton pathname={router.pathname} /&gt;
+      )}
+      &lt;Component {...pageProps} /&gt;
+    &lt;/&gt;
+  );
+}</code></pre>
+        </div>
+      </div>
+
+      <!-- React Router -->
+      <div id="tab-react-router" class="tab-content hidden space-y-6">
+        <div>
+          <div class="flex items-center gap-2 mb-2">
+            <span class="text-xs font-mono text-slate-500">App.tsx</span>
+            <button onclick="copyCodeBlock(this)" class="copy-btn text-xs px-2 py-0.5 rounded text-slate-500 border border-slate-700">Copy</button>
+          </div>
+          <pre><code class="language-tsx">import { useLocation } from 'react-router-dom';
+import { PathPickerButton } from 'react-path-picker';
+
+export function DevPathPicker() {
+  const location = useLocation();
+  if (import.meta.env.PROD) return null;
+  return &lt;PathPickerButton pathname={location.pathname} /&gt;;
+}</code></pre>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== CORE API ========== -->
+  <section id="api" class="py-20 px-4 bg-pp-dark/50">
+    <div class="max-w-4xl mx-auto">
+      <h2 class="text-3xl font-bold text-white text-center mb-4">Core API</h2>
+      <p class="text-slate-400 text-center mb-10 max-w-2xl mx-auto">
+        Need to use the inspector outside React, or wire up your own UI? Import from the framework-agnostic
+        <code class="text-pp-light font-mono text-sm">react-path-picker/core</code> subpath.
+      </p>
+
+      <div>
+        <div class="flex items-center gap-2 mb-2">
+          <span class="text-xs font-mono text-slate-500">vanilla.ts</span>
+          <button onclick="copyCodeBlock(this)" class="copy-btn text-xs px-2 py-0.5 rounded text-slate-500 border border-slate-700">Copy</button>
+        </div>
+        <pre><code class="language-typescript">import {
+  PathPickerInspector,
+  getXPath,
+  getCssSelector,
+} from 'react-path-picker/core';
+
+const inspector = new PathPickerInspector({
+  getRoute: () =&gt; window.location.pathname,
+  onPick: (result) =&gt; {
+    console.log('[xPathInfo]', result);
+    // result: { route, xpath, cssSelector, tagName, id, textContent,
+    //          reactComponent, reactSource }
+  },
+  onCancel: () =&gt; console.log('cancelled'),
+});
+
+inspector.activate();
+
+// Or use the utility functions directly on any element:
+const el = document.querySelector('main')!;
+console.log(getXPath(el));        // /html/body/div[2]/main
+console.log(getCssSelector(el));  // main.layout-content</code></pre>
+      </div>
+
+      <!-- Compact API table -->
+      <div class="mt-10 overflow-x-auto rounded-xl border border-slate-700">
+        <table class="w-full text-sm text-left">
+          <thead>
+            <tr class="text-slate-400 bg-pp-dark">
+              <th class="font-medium px-4 py-3">Export</th>
+              <th class="font-medium px-4 py-3">Signature</th>
+              <th class="font-medium px-4 py-3">Description</th>
+            </tr>
+          </thead>
+          <tbody class="text-slate-300 divide-y divide-slate-700">
+            <tr>
+              <td class="font-mono text-pp text-xs px-4 py-3">PathPickerButton</td>
+              <td class="font-mono text-xs text-slate-400 px-4 py-3">{ pathname?, color? }</td>
+              <td class="text-xs px-4 py-3">React button + overlay. Drop into your dev layout.</td>
+            </tr>
+            <tr>
+              <td class="font-mono text-pp text-xs px-4 py-3">usePathPicker</td>
+              <td class="font-mono text-xs text-slate-400 px-4 py-3">(pathname?) =&gt; { isActive, justCopied, toggle }</td>
+              <td class="text-xs px-4 py-3">Hook for building your own UI.</td>
+            </tr>
+            <tr>
+              <td class="font-mono text-pp text-xs px-4 py-3">PathPickerInspector</td>
+              <td class="font-mono text-xs text-slate-400 px-4 py-3">new (callbacks) =&gt; Inspector</td>
+              <td class="text-xs px-4 py-3">Core class with <code class="text-pp">activate()</code> / <code class="text-pp">deactivate()</code>.</td>
+            </tr>
+            <tr>
+              <td class="font-mono text-pp text-xs px-4 py-3">getXPath</td>
+              <td class="font-mono text-xs text-slate-400 px-4 py-3">(el: Element) =&gt; string</td>
+              <td class="text-xs px-4 py-3">XPath with ID shortcuts &amp; SVG boundaries.</td>
+            </tr>
+            <tr>
+              <td class="font-mono text-pp text-xs px-4 py-3">getCssSelector</td>
+              <td class="font-mono text-xs text-slate-400 px-4 py-3">(el: Element) =&gt; string</td>
+              <td class="text-xs px-4 py-3">Unique CSS selector (max 5 levels).</td>
+            </tr>
+            <tr>
+              <td class="font-mono text-pp text-xs px-4 py-3">getReactComponent</td>
+              <td class="font-mono text-xs text-slate-400 px-4 py-3">(el: Element) =&gt; { name, source } | null</td>
+              <td class="text-xs px-4 py-3">Walks the Fiber tree to find the nearest user component.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== PUBLISH CHECKLIST ========== -->
+  <section id="publish" class="py-20 px-4">
+    <div class="max-w-3xl mx-auto">
+      <h2 class="text-3xl font-bold text-white text-center mb-4">Publish checklist</h2>
+      <p class="text-slate-400 text-center mb-10">Steps to ship a release of <code class="text-pp-light font-mono text-sm">react-path-picker</code> to npm.</p>
+
+      <ol class="space-y-3">
+        <li class="bg-pp-surface border border-slate-700 rounded-xl p-5 flex items-start gap-4">
+          <div class="w-7 h-7 rounded-full bg-pp/20 flex items-center justify-center text-pp font-mono text-xs font-bold flex-shrink-0">1</div>
+          <div class="flex-1">
+            <p class="text-white text-sm font-semibold mb-1">Update package metadata</p>
+            <p class="text-xs text-slate-400">Confirm <code class="text-pp">repository</code>, <code class="text-pp">homepage</code>, and <code class="text-pp">bugs</code> in <code class="text-pp">package.json</code> point at <code class="text-pp">github.com/kiboko-ai/react-path-picker</code>.</p>
+          </div>
+        </li>
+        <li class="bg-pp-surface border border-slate-700 rounded-xl p-5 flex items-start gap-4">
+          <div class="w-7 h-7 rounded-full bg-pp/20 flex items-center justify-center text-pp font-mono text-xs font-bold flex-shrink-0">2</div>
+          <div class="flex-1">
+            <p class="text-white text-sm font-semibold mb-1">Bump the version</p>
+            <p class="text-xs text-slate-400 mb-2">Use semver. Pre-1.0 releases are still under active iteration.</p>
+            <pre><code class="language-bash">npm version patch   # or: minor / major</code></pre>
+          </div>
+        </li>
+        <li class="bg-pp-surface border border-slate-700 rounded-xl p-5 flex items-start gap-4">
+          <div class="w-7 h-7 rounded-full bg-pp/20 flex items-center justify-center text-pp font-mono text-xs font-bold flex-shrink-0">3</div>
+          <div class="flex-1">
+            <p class="text-white text-sm font-semibold mb-1">Verify build &amp; tests</p>
+            <p class="text-xs text-slate-400 mb-2"><code class="text-pp">prepublishOnly</code> runs these automatically on publish, but check locally first.</p>
+            <pre><code class="language-bash">npm run typecheck
+npm test
+npm run build</code></pre>
+          </div>
+        </li>
+        <li class="bg-pp-surface border border-slate-700 rounded-xl p-5 flex items-start gap-4">
+          <div class="w-7 h-7 rounded-full bg-pp/20 flex items-center justify-center text-pp font-mono text-xs font-bold flex-shrink-0">4</div>
+          <div class="flex-1">
+            <p class="text-white text-sm font-semibold mb-1">Dry-run the tarball</p>
+            <p class="text-xs text-slate-400 mb-2">Inspect what will actually ship to consumers — only <code class="text-pp">dist/</code>, <code class="text-pp">README.md</code>, and <code class="text-pp">LICENSE</code> should be included.</p>
+            <pre><code class="language-bash">npm pack --dry-run</code></pre>
+          </div>
+        </li>
+        <li class="bg-pp-surface border border-slate-700 rounded-xl p-5 flex items-start gap-4">
+          <div class="w-7 h-7 rounded-full bg-pp/20 flex items-center justify-center text-pp font-mono text-xs font-bold flex-shrink-0">5</div>
+          <div class="flex-1">
+            <p class="text-white text-sm font-semibold mb-1">Login &amp; check name availability</p>
+            <pre><code class="language-bash">npm login
+npm view react-path-picker name</code></pre>
+          </div>
+        </li>
+        <li class="bg-pp-surface border border-slate-700 rounded-xl p-5 flex items-start gap-4">
+          <div class="w-7 h-7 rounded-full bg-pp/20 flex items-center justify-center text-pp font-mono text-xs font-bold flex-shrink-0">6</div>
+          <div class="flex-1">
+            <p class="text-white text-sm font-semibold mb-1">Publish</p>
+            <pre><code class="language-bash">npm publish --access public</code></pre>
+          </div>
+        </li>
+        <li class="bg-pp-surface border border-slate-700 rounded-xl p-5 flex items-start gap-4">
+          <div class="w-7 h-7 rounded-full bg-pp/20 flex items-center justify-center text-pp font-mono text-xs font-bold flex-shrink-0">7</div>
+          <div class="flex-1">
+            <p class="text-white text-sm font-semibold mb-1">Tag &amp; push</p>
+            <p class="text-xs text-slate-400 mb-2">Push the version commit and tag created by <code class="text-pp">npm version</code>.</p>
+            <pre><code class="language-bash">git push --follow-tags</code></pre>
+          </div>
+        </li>
+      </ol>
+    </div>
+  </section>
+
+  <!-- ========== FOOTER ========== -->
+  <footer class="py-12 px-4 border-t border-slate-800">
+    <div class="max-w-4xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
+      <div class="flex items-center gap-2 text-slate-500 text-sm">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#329D9C" stroke-width="1.5">
+          <circle cx="8" cy="8" r="5.5"/>
+          <circle cx="8" cy="8" r="1.5" fill="#329D9C" stroke="none"/>
+          <line x1="8" y1="0" x2="8" y2="3"/>
+          <line x1="8" y1="13" x2="8" y2="16"/>
+          <line x1="0" y1="8" x2="3" y2="8"/>
+          <line x1="13" y1="8" x2="16" y2="8"/>
+        </svg>
+        react-path-picker &middot; MIT License &middot; Made by <a href="https://kiboko.ai" target="_blank" rel="noopener" class="text-pp hover:text-pp-light transition">Kiboko AI</a>
+      </div>
+      <a href="https://github.com/kiboko-ai/react-path-picker" target="_blank" rel="noopener" class="text-slate-500 hover:text-white text-sm transition flex items-center gap-1">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+        kiboko-ai/react-path-picker
+      </a>
+    </div>
+  </footer>
+
+  <!-- ========== INLINE JS ========== -->
+  <script>
+    function clipboardWrite(text) {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        return navigator.clipboard.writeText(text);
+      }
+      return new Promise(function(resolve) {
+        var ta = document.createElement('textarea');
+        ta.value = text;
+        ta.style.cssText = 'position:fixed;left:-9999px;top:-9999px;opacity:0';
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+        resolve();
+      });
+    }
+
+    function flashCopied(btn) {
+      var original = btn.textContent;
+      btn.textContent = 'Copied!';
+      btn.classList.add('copied');
+      setTimeout(function() {
+        btn.textContent = original;
+        btn.classList.remove('copied');
+      }, 1400);
+    }
+
+    function copyText(text, btn) {
+      clipboardWrite(text).then(function() { flashCopied(btn); });
+    }
+
+    function copyCodeBlock(btn) {
+      var container = btn.closest('div').parentElement;
+      var pre = container.querySelector('pre code');
+      if (!pre) return;
+      clipboardWrite(pre.textContent).then(function() { flashCopied(btn); });
+    }
+
+    function switchTab(id, btn) {
+      var tabs = btn.parentElement.querySelectorAll('.tab-btn');
+      tabs.forEach(function(t) { t.classList.remove('active'); });
+      btn.classList.add('active');
+
+      document.querySelectorAll('.tab-content').forEach(function(c) {
+        c.classList.add('hidden');
+      });
+      var target = document.getElementById('tab-' + id);
+      if (target) target.classList.remove('hidden');
+    }
+
+    if (window.Prism) Prism.highlightAll();
+  </script>
+</body>
+</html>
