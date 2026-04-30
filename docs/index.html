@@ -324,10 +324,16 @@
   <section id="quickstart" class="py-20 px-4">
     <div class="max-w-4xl mx-auto">
       <h2 class="text-3xl font-bold text-white text-center mb-4">Quick Start</h2>
-      <p class="text-slate-400 text-center mb-10 max-w-2xl mx-auto">Let your AI agent install and wire <code class="text-pp-light font-mono text-sm">react-path-picker</code>. Paste the prompt below into Claude Code, Cursor, or Codex — no copy-pasting snippets.</p>
+      <p class="text-slate-400 text-center mb-8 max-w-2xl mx-auto">Pick one. The Prompt tab is the default — your AI agent does the wiring for you.</p>
 
-      <!-- VIBE CODING PROMPT (PRIMARY) -->
-      <div class="mb-14">
+      <!-- TOP-LEVEL MODE TABS -->
+      <div class="flex flex-wrap gap-2 mb-8 justify-center">
+        <button class="mode-tab-btn tab-btn active text-sm px-5 py-2 rounded-full border border-slate-600 text-slate-300 font-semibold" onclick="switchModeTab('prompt', this)">Prompt 방식 (기본)</button>
+        <button class="mode-tab-btn tab-btn text-sm px-5 py-2 rounded-full border border-slate-600 text-slate-300 font-semibold" onclick="switchModeTab('manual', this)">Manual 방식 (옵션)</button>
+      </div>
+
+      <!-- MODE: PROMPT (default) -->
+      <div id="mode-prompt" class="mode-tab-content">
         <div class="flex items-center justify-between gap-2 mb-2">
           <span class="text-xs font-mono text-slate-500 uppercase tracking-wider">Prompt for Claude Code / Cursor / Codex</span>
           <button onclick="copyCodeBlock(this)" class="copy-btn text-xs px-3 py-1 rounded text-slate-200 border border-pp/50 bg-pp/10 hover:bg-pp/20">Copy prompt</button>
@@ -352,28 +358,25 @@ Do not modify production code paths or render the picker in production builds.</
         <p class="text-xs text-slate-500 mt-3 text-center">Works with any AI coding agent that has shell &amp; filesystem access.</p>
       </div>
 
-      <!-- OPTIONAL: MANUAL SETUP -->
-      <div class="border-t border-slate-700 pt-10">
-        <div class="text-center mb-6">
-          <h3 class="text-xl font-semibold text-white mb-1">Optional: Manual setup</h3>
-          <p class="text-sm text-slate-500">Prefer to wire it up by hand? Pick the router you're using.</p>
+      <!-- MODE: MANUAL -->
+      <div id="mode-manual" class="mode-tab-content hidden">
+        <p class="text-sm text-slate-500 text-center mb-6">Prefer to wire it up by hand? Pick the router you're using.</p>
+
+        <!-- Framework tabs -->
+        <div class="flex flex-wrap gap-2 mb-6 justify-center">
+          <button class="tab-btn active text-sm px-4 py-1.5 rounded-full border border-slate-600 text-slate-300" onclick="switchTab('nextjs-app', this)">Next.js App Router</button>
+          <button class="tab-btn text-sm px-4 py-1.5 rounded-full border border-slate-600 text-slate-300" onclick="switchTab('nextjs-pages', this)">Next.js Pages Router</button>
+          <button class="tab-btn text-sm px-4 py-1.5 rounded-full border border-slate-600 text-slate-300" onclick="switchTab('react-router', this)">React Router</button>
         </div>
 
-      <!-- Framework tabs -->
-      <div class="flex flex-wrap gap-2 mb-6 justify-center">
-        <button class="tab-btn active text-sm px-4 py-1.5 rounded-full border border-slate-600 text-slate-300" onclick="switchTab('nextjs-app', this)">Next.js App Router</button>
-        <button class="tab-btn text-sm px-4 py-1.5 rounded-full border border-slate-600 text-slate-300" onclick="switchTab('nextjs-pages', this)">Next.js Pages Router</button>
-        <button class="tab-btn text-sm px-4 py-1.5 rounded-full border border-slate-600 text-slate-300" onclick="switchTab('react-router', this)">React Router</button>
-      </div>
-
-      <!-- Next.js App Router -->
-      <div id="tab-nextjs-app" class="tab-content space-y-6">
-        <div>
-          <div class="flex items-center gap-2 mb-2">
-            <span class="text-xs font-mono text-slate-500">components/DevPathPicker.tsx</span>
-            <button onclick="copyCodeBlock(this)" class="copy-btn text-xs px-2 py-0.5 rounded text-slate-500 border border-slate-700">Copy</button>
-          </div>
-          <pre><code class="language-tsx">'use client';
+        <!-- Next.js App Router -->
+        <div id="tab-nextjs-app" class="tab-content space-y-6">
+          <div>
+            <div class="flex items-center gap-2 mb-2">
+              <span class="text-xs font-mono text-slate-500">components/DevPathPicker.tsx</span>
+              <button onclick="copyCodeBlock(this)" class="copy-btn text-xs px-2 py-0.5 rounded text-slate-500 border border-slate-700">Copy</button>
+            </div>
+            <pre><code class="language-tsx">'use client';
 
 import { usePathname } from 'next/navigation';
 import { PathPickerButton } from 'react-path-picker';
@@ -383,13 +386,13 @@ export default function DevPathPicker() {
   if (process.env.NODE_ENV !== 'development') return null;
   return &lt;PathPickerButton pathname={pathname} /&gt;;
 }</code></pre>
-        </div>
-        <div>
-          <div class="flex items-center gap-2 mb-2">
-            <span class="text-xs font-mono text-slate-500">app/layout.tsx</span>
-            <button onclick="copyCodeBlock(this)" class="copy-btn text-xs px-2 py-0.5 rounded text-slate-500 border border-slate-700">Copy</button>
           </div>
-          <pre><code class="language-tsx">import DevPathPicker from '@/components/DevPathPicker';
+          <div>
+            <div class="flex items-center gap-2 mb-2">
+              <span class="text-xs font-mono text-slate-500">app/layout.tsx</span>
+              <button onclick="copyCodeBlock(this)" class="copy-btn text-xs px-2 py-0.5 rounded text-slate-500 border border-slate-700">Copy</button>
+            </div>
+            <pre><code class="language-tsx">import DevPathPicker from '@/components/DevPathPicker';
 
 export default function RootLayout({ children }) {
   return (
@@ -401,17 +404,17 @@ export default function RootLayout({ children }) {
     &lt;/html&gt;
   );
 }</code></pre>
-        </div>
-      </div>
-
-      <!-- Next.js Pages Router -->
-      <div id="tab-nextjs-pages" class="tab-content hidden space-y-6">
-        <div>
-          <div class="flex items-center gap-2 mb-2">
-            <span class="text-xs font-mono text-slate-500">pages/_app.tsx</span>
-            <button onclick="copyCodeBlock(this)" class="copy-btn text-xs px-2 py-0.5 rounded text-slate-500 border border-slate-700">Copy</button>
           </div>
-          <pre><code class="language-tsx">import { useRouter } from 'next/router';
+        </div>
+
+        <!-- Next.js Pages Router -->
+        <div id="tab-nextjs-pages" class="tab-content hidden space-y-6">
+          <div>
+            <div class="flex items-center gap-2 mb-2">
+              <span class="text-xs font-mono text-slate-500">pages/_app.tsx</span>
+              <button onclick="copyCodeBlock(this)" class="copy-btn text-xs px-2 py-0.5 rounded text-slate-500 border border-slate-700">Copy</button>
+            </div>
+            <pre><code class="language-tsx">import { useRouter } from 'next/router';
 import { PathPickerButton } from 'react-path-picker';
 
 export default function App({ Component, pageProps }) {
@@ -425,17 +428,17 @@ export default function App({ Component, pageProps }) {
     &lt;/&gt;
   );
 }</code></pre>
-        </div>
-      </div>
-
-      <!-- React Router -->
-      <div id="tab-react-router" class="tab-content hidden space-y-6">
-        <div>
-          <div class="flex items-center gap-2 mb-2">
-            <span class="text-xs font-mono text-slate-500">App.tsx</span>
-            <button onclick="copyCodeBlock(this)" class="copy-btn text-xs px-2 py-0.5 rounded text-slate-500 border border-slate-700">Copy</button>
           </div>
-          <pre><code class="language-tsx">import { useLocation } from 'react-router-dom';
+        </div>
+
+        <!-- React Router -->
+        <div id="tab-react-router" class="tab-content hidden space-y-6">
+          <div>
+            <div class="flex items-center gap-2 mb-2">
+              <span class="text-xs font-mono text-slate-500">App.tsx</span>
+              <button onclick="copyCodeBlock(this)" class="copy-btn text-xs px-2 py-0.5 rounded text-slate-500 border border-slate-700">Copy</button>
+            </div>
+            <pre><code class="language-tsx">import { useLocation } from 'react-router-dom';
 import { PathPickerButton } from 'react-path-picker';
 
 export function DevPathPicker() {
@@ -443,8 +446,8 @@ export function DevPathPicker() {
   if (import.meta.env.PROD) return null;
   return &lt;PathPickerButton pathname={location.pathname} /&gt;;
 }</code></pre>
+          </div>
         </div>
-      </div>
       </div>
     </div>
   </section>
@@ -666,10 +669,23 @@ npm view react-path-picker name</code></pre>
       tabs.forEach(function(t) { t.classList.remove('active'); });
       btn.classList.add('active');
 
-      document.querySelectorAll('.tab-content').forEach(function(c) {
+      var scope = btn.closest('.mode-tab-content') || document;
+      scope.querySelectorAll('.tab-content').forEach(function(c) {
         c.classList.add('hidden');
       });
-      var target = document.getElementById('tab-' + id);
+      var target = (scope.querySelector ? scope : document).querySelector('#tab-' + id);
+      if (target) target.classList.remove('hidden');
+    }
+
+    function switchModeTab(id, btn) {
+      var tabs = btn.parentElement.querySelectorAll('.mode-tab-btn');
+      tabs.forEach(function(t) { t.classList.remove('active'); });
+      btn.classList.add('active');
+
+      document.querySelectorAll('.mode-tab-content').forEach(function(c) {
+        c.classList.add('hidden');
+      });
+      var target = document.getElementById('mode-' + id);
       if (target) target.classList.remove('hidden');
     }
 

@@ -4,7 +4,11 @@ Dev-only DOM inspector for React/Next.js apps.
 
 Click an element → copy `[xPathInfo] Route, XPath, CSS, React` to clipboard.
 
-## Quick Start: Agentic Coding (Vibe Coding)
+## Quick Start
+
+Pick one. The Prompt tab is the default — your AI agent does the wiring for you.
+
+### [Prompt 방식 (기본)]
 
 Paste this prompt into Claude Code, Cursor, Codex, or any AI coding agent that has shell + filesystem access in your project. It will install and wire `react-path-picker` for you — no copy-pasting snippets.
 
@@ -30,13 +34,19 @@ Do not modify production code paths or render the picker in production builds.
 
 That's it — your agent reads this repo and handles the rest.
 
-## Optional: Manual setup
+---
+
+### [Manual 방식 (옵션)]
+
+<sub>Prefer to wire it up by hand? Pick the router you're using.</sub>
+
+<sub>Install:</sub>
 
 ```bash
 npm install react-path-picker
 ```
 
-### Next.js (App Router)
+<sub>**Next.js (App Router)**</sub>
 
 ```tsx
 'use client';
@@ -51,9 +61,9 @@ export default function DevPathPicker() {
 }
 ```
 
-Add it to `app/layout.tsx` (inside `<body>`).
+<sub>Add it to `app/layout.tsx` (inside `<body>`).</sub>
 
-### Next.js (Pages Router)
+<sub>**Next.js (Pages Router)**</sub>
 
 ```tsx
 import { useRouter } from 'next/router';
@@ -72,7 +82,7 @@ export default function App({ Component, pageProps }) {
 }
 ```
 
-### React Router
+<sub>**React Router**</sub>
 
 ```tsx
 import { useLocation } from 'react-router-dom';
