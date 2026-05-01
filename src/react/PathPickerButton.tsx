@@ -75,12 +75,17 @@ export function PathPickerButton({
         onClick={toggle}
         title="xPathInfo: pick an element to copy"
         style={{
-          width: 18,
-          height: 18,
-          borderRadius: 4,
-          border: isActive ? `1.5px solid ${color}` : '1px solid transparent',
-          background: isActive ? color : 'transparent',
-          color: isActive ? '#fff' : hovered ? color : 'rgba(0,0,0,0.4)',
+          width: 24,
+          height: 24,
+          borderRadius: 6,
+          border: isActive ? `1.5px solid ${color}` : '1px solid rgba(255,255,255,0.22)',
+          background: isActive ? color : 'rgba(15,23,42,0.78)',
+          color: isActive ? '#fff' : hovered ? '#fff' : 'rgba(226,232,240,0.95)',
+          boxShadow: isActive
+            ? `0 0 0 1px ${color}55, 0 8px 20px rgba(0,0,0,0.35)`
+            : '0 0 0 1px rgba(255,255,255,0.15), 0 6px 16px rgba(0,0,0,0.4)',
+          backdropFilter: 'blur(4px) saturate(120%)',
+          WebkitBackdropFilter: 'blur(4px) saturate(120%)',
           cursor: 'pointer',
           display: 'flex',
           alignItems: 'center',
