@@ -1,7 +1,7 @@
 {
   "name": "react-path-picker",
   "version": "0.1.3",
-  "description": "Click any DOM element and copy its XPath, CSS selector, route, and React component info to the clipboard. Tiny dev tool with React hook and button, framework-agnostic core.",
+  "description": "One click saves a thousand tokens. Stop describing UI elements to your AI agent — click any element to copy its XPath, CSS selector, route, and React component info, then paste straight into Cursor / Claude Code / Codex.",
   "keywords": [
     "react",
     "xpath",
@@ -10,7 +10,11 @@
     "inspector",
     "picker",
     "react-fiber",
-    "dev-tool"
+    "dev-tool",
+    "ai-coding-agent",
+    "claude-code",
+    "cursor",
+    "codex"
   ],
   "author": "react-path-picker contributors",
   "license": "MIT",
@@ -18,7 +22,7 @@
     "type": "git",
     "url": "git+https://github.com/kiboko-ai/react-path-picker.git"
   },
-  "homepage": "https://github.com/kiboko-ai/react-path-picker#readme",
+  "homepage": "https://kiboko-ai.github.io/react-path-picker/",
   "bugs": {
     "url": "https://github.com/kiboko-ai/react-path-picker/issues"
   },

@@ -1,8 +1,29 @@
 # react-path-picker
 
-Dev-only DOM inspector for React/Next.js apps.
+> ## One click saves a thousand tokens.
 
-Click an element → copy `[xPathInfo] Route, XPath, CSS, React` to clipboard.
+Stop describing UI elements to your AI agent. Click any element on your dev build, paste the exact XPath, CSS selector, and React component name straight into **Cursor / Claude Code / Codex**.
+
+🌐 **[Live demo & docs →](https://kiboko-ai.github.io/react-path-picker/)**
+
+```
+[xPathInfo] Route: /dashboard, XPath: /html/body/div[2]/main, CSS: main.layout-content, React: DashboardPage (app/dashboard/page.tsx)
+```
+
+## How it works
+
+Three clicks. From mystery DOM node to a clipboard-ready snippet your agent can paste straight into a fix:
+
+1. **Click the aim icon** in the top-right of your dev build.
+2. **Hover any element.** A teal overlay highlights it with a tooltip showing its tag, classes, and detected component.
+3. **Click to copy.** Route, XPath, CSS selector, and React component name + source path land on your clipboard.
+
+## Features
+
+- **Smart XPath** — ID shortcuts and SVG-boundary detection produce minimal, readable expressions.
+- **Unique CSS selector** — capped at 5 levels, auto-filters Ant Design / emotion `css-*` hash classes.
+- **React component detection** — walks the React Fiber tree at runtime to find the nearest user component name and (with a small dev-only loader) its source file.
+- **Framework-agnostic core** — `react-path-picker/core` exposes `PathPickerInspector`, `getXPath()`, `getCssSelector()`, and `getReactComponent()`. No React required — works in plain HTML too via esm.sh.
 
 ## Quick Start
 
@@ -135,6 +156,8 @@ export function DevPathPicker() {
 
 ## Core API (framework-agnostic)
 
+Need to use the inspector outside React, or wire up your own UI? Import from the framework-agnostic `react-path-picker/core` subpath.
+
 ```ts
 import { PathPickerInspector, getXPath, getCssSelector } from 'react-path-picker/core';
 
@@ -154,12 +177,13 @@ inspector.activate();
 | Prop | Type | Default | Description |
 |---|---|---|---|
 | `pathname` | `string` | `window.location.pathname` | Route text copied to clipboard |
-| `color` | `string` | `#329D9C` | Active color |
+| `color` | `string` | `#329D9C` | Active accent color |
+| `onPick` | `(result, formatted) => void` | clipboard copy | Custom handler invoked after a successful pick |
 
 ### Exports
 
-- Root: `PathPickerButton`, `usePathPicker`, `PathPickerInspector`, `getXPath`, `getCssSelector`, `getReactComponent`
-- Subpath: `react-path-picker/core`
+- Root (`react-path-picker`): `PathPickerButton`, `usePathPicker`, `formatResult`, `PathPickerInspector`, `getXPath`, `getCssSelector`, `getReactComponent`
+- Subpath (`react-path-picker/core`): same core utilities, no React dependency.
 
 ## Development
 
@@ -171,14 +195,6 @@ npm run build
 npm pack
 ```
 
-## Publish (npm public)
-
-1. Login: `npm login`
-2. Check name availability: `npm view react-path-picker name`
-3. Dry run: `npm pack`
-4. Publish: `npm publish --access public`
-5. Create GitHub release/tag after publish (recommended).
-
 ## License
 
-MIT
+MIT — made by [Kiboko AI](https://kiboko.ai).
