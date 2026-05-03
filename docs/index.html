@@ -667,7 +667,8 @@ console.log(getCssSelector(el));  // main.layout-content</code></pre>
       const { PathPickerInspector } = await import('https://esm.sh/react-path-picker/core');
 
       const ACCENT = '#329D9C';
-      const IDLE_BG = 'rgba(15,23,42,0.78)';
+      const ICON_SHADOW =
+        'drop-shadow(0 1px 2px rgba(0,0,0,0.55)) drop-shadow(0 0 1px rgba(255,255,255,0.7))';
 
       const wrap = document.createElement('div');
       wrap.setAttribute('data-pathpicker-ignore', '');
@@ -693,10 +694,8 @@ console.log(getCssSelector(el));  // main.layout-content</code></pre>
         '</svg>';
       btn.style.cssText =
         'width:24px;height:24px;border-radius:6px;border:none;' +
-        'background:' + IDLE_BG + ';color:rgba(226,232,240,0.95);' +
-        'box-shadow:0 6px 16px rgba(0,0,0,0.4);' +
-        'backdrop-filter:blur(4px) saturate(120%);' +
-        '-webkit-backdrop-filter:blur(4px) saturate(120%);' +
+        'background:transparent;color:' + ACCENT + ';' +
+        'filter:' + ICON_SHADOW + ';' +
         'cursor:pointer;display:flex;align-items:center;justify-content:center;' +
         'padding:0;transition:all 0.2s';
 
@@ -769,15 +768,17 @@ console.log(getCssSelector(el));  // main.layout-content</code></pre>
       let copiedTimer;
 
       function setIdle() {
-        btn.style.background = IDLE_BG;
-        btn.style.color = 'rgba(226,232,240,0.95)';
-        btn.style.boxShadow = '0 6px 16px rgba(0,0,0,0.4)';
+        btn.style.background = 'transparent';
+        btn.style.color = ACCENT;
+        btn.style.boxShadow = 'none';
+        btn.style.filter = ICON_SHADOW;
         label.style.display = 'none';
       }
       function setActive() {
         btn.style.background = ACCENT;
         btn.style.color = '#fff';
-        btn.style.boxShadow = '0 8px 20px rgba(0,0,0,0.35)';
+        btn.style.boxShadow = '0 4px 12px ' + ACCENT + '55';
+        btn.style.filter = 'none';
         label.textContent = 'Pick…';
         label.style.color = ACCENT;
         label.style.background = ACCENT + '18';
