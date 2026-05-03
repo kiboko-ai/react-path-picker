@@ -17,7 +17,9 @@ Install and wire up react-path-picker into this project.
 Repo: https://github.com/kiboko-ai/react-path-picker
 
 Steps:
-1. Detect the framework (Next.js App Router, Pages Router, or React with React Router / Vite).
+1. Detect the project type:
+   - **React app** — Next.js App Router, Pages Router, or React with React Router / Vite. Follow steps 2–6.
+   - **Plain HTML** — static `.html` files, no bundler / no npm. Skip steps 2–5 and use the Plain HTML snippet at the bottom instead.
 2. Install the package: `npm install react-path-picker`.
 3. Create a dev-only `DevPathPicker` component that uses `PathPickerButton` from `react-path-picker`.
    Pass the current pathname via the framework's router hook
@@ -28,6 +30,42 @@ Steps:
 5. Mount it once at the root (`app/layout.tsx`, `pages/_app.tsx`, or `App.tsx`) so the inspector
    button shows on every page.
 6. Run the project's typecheck/build (e.g. `npm run typecheck`) and fix any issues.
+
+For **Plain HTML**, add this `<script type="module">` to a dev-only HTML page (never ship to
+production). It loads `react-path-picker/core` from esm.sh, mounts a fixed top-right button, and
+copies `[xPathInfo] Route, XPath, CSS` to the clipboard on pick:
+
+```html
+<script type="module">
+  import { PathPickerInspector } from 'https://esm.sh/react-path-picker/core';
+  const btn = document.createElement('button');
+  btn.textContent = '◎';
+  btn.title = 'xPathInfo: pick an element to copy';
+  btn.setAttribute('data-pathpicker-ignore', '');
+  btn.style.cssText =
+    'position:fixed;top:6px;right:6px;z-index:99998;width:28px;height:28px;' +
+    'border-radius:6px;border:1px solid rgba(255,255,255,0.22);background:#0f172a;' +
+    'color:#fff;cursor:pointer;font:14px/1 monospace';
+  document.body.appendChild(btn);
+  let ins = null;
+  const reset = () => { ins = null; btn.style.background = '#0f172a'; };
+  btn.onclick = () => {
+    if (ins) { ins.deactivate(); reset(); return; }
+    ins = new PathPickerInspector({
+      getRoute: () => location.pathname,
+      onPick: (r) => {
+        navigator.clipboard?.writeText(
+          `[xPathInfo] Route: ${r.route}, XPath: ${r.xpath}, CSS: ${r.cssSelector}`
+        );
+        reset();
+      },
+      onCancel: reset,
+    });
+    ins.activate();
+    btn.style.background = '#329D9C';
+  };
+</script>
+```
 
 Do not modify production code paths or render the picker in production builds.
 ````
