@@ -1,0 +1,24 @@
+{
+  "name": "react-path-picker-demo-video",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Remotion composition that renders the path picker workflow demo for the docs site",
+  "type": "module",
+  "scripts": {
+    "dev": "remotion studio src/Root.tsx",
+    "render": "remotion render src/Root.tsx PickerDemo out/path-picker-demo.mp4 --codec=h264 --crf=20",
+    "still": "remotion still src/Root.tsx PickerDemo out/path-picker-demo-poster.png --frame=0"
+  },
+  "dependencies": {
+    "@remotion/cli": "^4.0.0",
+    "@remotion/google-fonts": "^4.0.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "remotion": "^4.0.0"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.3",
+    "@types/react-dom": "^18.3.0",
+    "typescript": "^5.4.5"
+  }
+}
