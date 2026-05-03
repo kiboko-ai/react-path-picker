@@ -78,14 +78,13 @@ export function PathPickerButton({
           width: 24,
           height: 24,
           borderRadius: 6,
-          border: isActive ? `1.5px solid ${color}` : '1px solid rgba(255,255,255,0.22)',
-          background: isActive ? color : 'rgba(15,23,42,0.78)',
-          color: isActive ? '#fff' : hovered ? '#fff' : 'rgba(226,232,240,0.95)',
-          boxShadow: isActive
-            ? `0 0 0 1px ${color}55, 0 8px 20px rgba(0,0,0,0.35)`
-            : '0 0 0 1px rgba(255,255,255,0.15), 0 6px 16px rgba(0,0,0,0.4)',
-          backdropFilter: 'blur(4px) saturate(120%)',
-          WebkitBackdropFilter: 'blur(4px) saturate(120%)',
+          border: 'none',
+          background: isActive ? color : hovered ? `${color}26` : 'transparent',
+          color: isActive ? '#fff' : color,
+          boxShadow: isActive ? `0 4px 12px ${color}55` : 'none',
+          filter: isActive
+            ? 'none'
+            : 'drop-shadow(0 1px 2px rgba(0,0,0,0.55)) drop-shadow(0 0 1px rgba(255,255,255,0.7))',
           cursor: 'pointer',
           display: 'flex',
           alignItems: 'center',
