@@ -145,6 +145,7 @@
           Get the AI agent prompt
         </a>
         <p class="text-xs text-slate-500 text-center max-w-md">Paste it into Claude Code, Cursor, or Codex — it installs &amp; wires <code class="text-pp-light font-mono">react-path-picker</code> for you.</p>
+        <p class="text-xs text-pp-light/80 text-center max-w-md">↗ Try it live on this page — click the aim icon in the top-right to inspect any element.</p>
       </div>
 
       <!-- SECONDARY: manual install command -->
@@ -658,6 +659,187 @@ console.log(getCssSelector(el));  // main.layout-content</code></pre>
     }
 
     if (window.Prism) Prism.highlightAll();
+  </script>
+
+  <!-- ========== LIVE DEMO: react-path-picker via esm.sh ========== -->
+  <script type="module">
+    try {
+      const { PathPickerInspector } = await import('https://esm.sh/react-path-picker/core');
+
+      const ACCENT = '#329D9C';
+      const IDLE_BG = 'rgba(15,23,42,0.78)';
+
+      const wrap = document.createElement('div');
+      wrap.setAttribute('data-pathpicker-ignore', '');
+      wrap.style.cssText =
+        'position:fixed;top:64px;right:8px;z-index:99998;display:flex;' +
+        'align-items:center;gap:4px;padding:2px 2px 8px 8px;font-family:inherit';
+
+      const label = document.createElement('span');
+      label.style.cssText =
+        'display:none;font-size:10px;color:' + ACCENT + ';' +
+        'background:' + ACCENT + '18;padding:1px 6px;border-radius:3px;' +
+        'font-weight:500;transition:all 0.2s';
+
+      const btn = document.createElement('button');
+      btn.title = 'xPathInfo: pick an element to copy (live demo)';
+      btn.innerHTML =
+        '<svg width="12" height="12" viewBox="0 0 16 16" fill="none" ' +
+        'stroke="currentColor" stroke-width="1.5">' +
+        '<circle cx="8" cy="8" r="5.5"/>' +
+        '<circle cx="8" cy="8" r="1.5" fill="currentColor" stroke="none"/>' +
+        '<line x1="8" y1="0" x2="8" y2="3"/><line x1="8" y1="13" x2="8" y2="16"/>' +
+        '<line x1="0" y1="8" x2="3" y2="8"/><line x1="13" y1="8" x2="16" y2="8"/>' +
+        '</svg>';
+      btn.style.cssText =
+        'width:24px;height:24px;border-radius:6px;border:none;' +
+        'background:' + IDLE_BG + ';color:rgba(226,232,240,0.95);' +
+        'box-shadow:0 6px 16px rgba(0,0,0,0.4);' +
+        'backdrop-filter:blur(4px) saturate(120%);' +
+        '-webkit-backdrop-filter:blur(4px) saturate(120%);' +
+        'cursor:pointer;display:flex;align-items:center;justify-content:center;' +
+        'padding:0;transition:all 0.2s';
+
+      wrap.appendChild(label);
+      wrap.appendChild(btn);
+      document.body.appendChild(wrap);
+
+      const fontLink = document.createElement('link');
+      fontLink.rel = 'stylesheet';
+      fontLink.href = 'https://fonts.googleapis.com/css2?family=Caveat:wght@700&display=swap';
+      document.head.appendChild(fontLink);
+
+      const hintStyle = document.createElement('style');
+      hintStyle.textContent =
+        '@keyframes pp-hint-pulse {' +
+        '  0%, 100% { opacity: 0.55; }' +
+        '  50%      { opacity: 1; }' +
+        '}' +
+        '@keyframes pp-hint-fadein {' +
+        '  from { opacity: 0; transform: translateY(6px); }' +
+        '  to   { opacity: 1; transform: translateY(0); }' +
+        '}';
+      document.head.appendChild(hintStyle);
+
+      const hint = document.createElement('div');
+      hint.setAttribute('data-pathpicker-ignore', '');
+      hint.style.cssText =
+        'position:fixed;top:68px;right:0;z-index:99998;' +
+        'width:240px;display:flex;flex-direction:column;align-items:flex-end;' +
+        'gap:6px;pointer-events:none;opacity:0;' +
+        'animation:pp-hint-fadein 0.45s ease-out 0.5s forwards';
+
+      const arrowWrap = document.createElement('div');
+      arrowWrap.style.cssText =
+        'width:160px;height:110px;margin-right:6px;' +
+        'filter:drop-shadow(0 2px 5px rgba(0,0,0,0.55))';
+      arrowWrap.innerHTML =
+        '<svg width="160" height="110" viewBox="0 0 160 110" fill="none" ' +
+        'stroke="' + ACCENT + '" stroke-width="4" ' +
+        'stroke-linecap="round" stroke-linejoin="round">' +
+        // squiggly hand-drawn curve from lower-left up to upper-right (toward button)
+        '<path d="M 14 100 C 4 78 30 70 32 60 C 34 50 14 42 36 32 C 50 26 38 20 60 16 C 82 14 100 12 133 12"/>' +
+        // arrowhead — symmetric V opening backward
+        '<path d="M 133 12 L 121 5"/>' +
+        '<path d="M 133 12 L 121 19"/>' +
+        '</svg>';
+
+      const tip = document.createElement('div');
+      tip.textContent = 'Try it!';
+      tip.style.cssText =
+        "font-family:'Caveat','Comic Sans MS',cursive;font-size:64px;" +
+        'font-weight:700;line-height:1;color:' + ACCENT + ';' +
+        'text-shadow:0 2px 8px rgba(0,0,0,0.6), 0 0 22px rgba(50,157,156,0.4);' +
+        'transform:rotate(-7deg);' +
+        'animation:pp-hint-pulse 2.4s ease-in-out infinite;' +
+        'margin-top:-14px;margin-right:88px;white-space:nowrap';
+
+      hint.appendChild(arrowWrap);
+      hint.appendChild(tip);
+      document.body.appendChild(hint);
+
+      function dismissHint() {
+        if (!hint.isConnected) return;
+        hint.style.transition = 'opacity 0.25s ease-out';
+        hint.style.opacity = '0';
+        setTimeout(function () { hint.remove(); }, 260);
+      }
+
+      let inspector = null;
+      let copiedTimer;
+
+      function setIdle() {
+        btn.style.background = IDLE_BG;
+        btn.style.color = 'rgba(226,232,240,0.95)';
+        btn.style.boxShadow = '0 6px 16px rgba(0,0,0,0.4)';
+        label.style.display = 'none';
+      }
+      function setActive() {
+        btn.style.background = ACCENT;
+        btn.style.color = '#fff';
+        btn.style.boxShadow = '0 8px 20px rgba(0,0,0,0.35)';
+        label.textContent = 'Pick…';
+        label.style.color = ACCENT;
+        label.style.background = ACCENT + '18';
+        label.style.display = 'inline-block';
+      }
+      function flashCopied() {
+        label.textContent = 'Copied!';
+        label.style.color = '#56C596';
+        label.style.background = 'rgba(86,197,150,0.1)';
+        label.style.display = 'inline-block';
+        clearTimeout(copiedTimer);
+        copiedTimer = setTimeout(function () {
+          label.style.display = 'none';
+        }, 1200);
+      }
+
+      function format(r) {
+        const parts = [
+          '[xPathInfo]',
+          'Route: ' + r.route,
+          'XPath: ' + r.xpath,
+          'CSS: ' + r.cssSelector,
+        ];
+        if (r.reactComponent) {
+          const src = r.reactSource ? ' (' + r.reactSource + ')' : '';
+          parts.push('React: ' + r.reactComponent + src);
+        }
+        return parts.join(', ');
+      }
+
+      btn.addEventListener('click', function () {
+        dismissHint();
+        if (inspector) {
+          inspector.deactivate();
+          inspector = null;
+          setIdle();
+          return;
+        }
+        inspector = new PathPickerInspector({
+          getRoute: function () { return location.pathname; },
+          onPick: function (r) {
+            const text = format(r);
+            (typeof clipboardWrite === 'function'
+              ? clipboardWrite(text)
+              : navigator.clipboard.writeText(text)
+            ).then(function () {
+              inspector = null;
+              setIdle();
+              flashCopied();
+            });
+          },
+          onCancel: function () {
+            inspector = null;
+            setIdle();
+          },
+        });
+        inspector.activate();
+        setActive();
+      });
+    } catch (err) {
+      console.warn('[react-path-picker live demo] CDN load failed:', err);
+    }
   </script>
 </body>
 </html>
