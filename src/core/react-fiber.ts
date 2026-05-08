@@ -2,17 +2,44 @@
  * Extract React component name and source from a DOM element.
  *
  * Strategy:
- *   1. Walk the fiber tree up to find the nearest user component.
- *   2. Read __componentSource off the component function (injected by an optional
- *      build-time loader; absent in production).
- *   3. Fallback: find the nearest [data-devbadge-name] / [data-devbadge-path] in the DOM.
+ *   1. Read `_debugSource` from the clicked fiber up — JSX call site (file:line:col)
+ *      that React's dev JSX transform attaches in development. Highest fidelity for
+ *      agentic coding: points to the exact source line that produced the picked DOM.
+ *   2. Walk the fiber tree up to find the nearest user component for the name.
+ *   3. Read __componentSource off the component function (injected by an optional
+ *      build-time loader; useful when `_debugSource` is stripped, e.g., in production).
+ *   4. Fallback: find the nearest [data-devbadge-name] / [data-devbadge-path] in the DOM.
  */
+
+interface DebugSource {
+  fileName: string;
+  lineNumber: number;
+  columnNumber?: number;
+}
 
 interface FiberNode {
   tag: number;
   type: { name?: string; displayName?: string; __componentSource?: string } | string | null;
   _debugOwner?: FiberNode | null;
+  _debugSource?: DebugSource | null;
   return: FiberNode | null;
+}
+
+const SOURCE_MARKERS = ['/src/', '/app/', '/pages/', '/components/'];
+
+function relativizePath(abs: string): string {
+  for (const m of SOURCE_MARKERS) {
+    const idx = abs.indexOf(m);
+    if (idx >= 0) return abs.slice(idx + 1);
+  }
+  const parts = abs.split('/').filter(Boolean);
+  return parts.length > 3 ? parts.slice(-3).join('/') : abs;
+}
+
+function formatDebugSource(src: DebugSource): string {
+  const path = relativizePath(src.fileName);
+  const col = typeof src.columnNumber === 'number' ? `:${src.columnNumber}` : '';
+  return `${path}:${src.lineNumber}${col}`;
 }
 
 function getFiberKey(el: Element): string | null {
@@ -74,17 +101,34 @@ export function getReactComponent(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let fiber: FiberNode | null = (el as any)[key] as FiberNode;
 
+    let elementSource: string | null = null;
+    let component: { name: string; fiberSource: string | null; buildTimeSource: string | null } | null = null;
+
     while (fiber) {
-      if (isUserComponent(fiber)) {
+      if (!elementSource && fiber._debugSource) {
+        elementSource = formatDebugSource(fiber._debugSource);
+      }
+
+      if (!component && isUserComponent(fiber)) {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const t = fiber.type as any;
         const name = t.displayName || t.name || null;
         if (name) {
-          const source = t.__componentSource || null;
-          return { name, source };
+          component = {
+            name,
+            fiberSource: fiber._debugSource ? formatDebugSource(fiber._debugSource) : null,
+            buildTimeSource: t.__componentSource || null,
+          };
         }
       }
+
+      if (elementSource && component) break;
       fiber = fiber.return;
+    }
+
+    if (component) {
+      const source = elementSource || component.buildTimeSource || component.fiberSource;
+      return { name: component.name, source };
     }
   }
 
