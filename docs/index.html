@@ -134,9 +134,18 @@
         <span class="gradient-text">a thousand tokens.</span>
       </h1>
 
-      <p class="text-lg sm:text-xl text-slate-400 mb-10 max-w-2xl mx-auto">
-        Stop describing UI elements to your AI agent. Click, copy the exact XPath &amp; CSS selector, paste. Your agent gets it instantly.
+      <p class="text-lg sm:text-xl text-slate-400 mb-6 max-w-2xl mx-auto">
+        Stop describing UI elements to your AI agent. Click. Copy the exact XPath, CSS selector, and React component. Paste.
       </p>
+
+      <!-- Target audience pill -->
+      <div class="flex flex-wrap items-center justify-center gap-2 mb-8 text-xs text-slate-400">
+        <span class="px-2.5 py-1 rounded-full border border-slate-700 bg-pp-surface/60">Built for pair-coding with</span>
+        <span class="px-2.5 py-1 rounded-full border border-pp/30 bg-pp/10 text-pp-light font-mono">Claude Code</span>
+        <span class="px-2.5 py-1 rounded-full border border-pp/30 bg-pp/10 text-pp-light font-mono">Cursor</span>
+        <span class="px-2.5 py-1 rounded-full border border-pp/30 bg-pp/10 text-pp-light font-mono">Codex</span>
+        <span class="px-2.5 py-1 rounded-full border border-pp/30 bg-pp/10 text-pp-light font-mono">Copilot</span>
+      </div>
 
       <!-- PRIMARY CTA: AI prompt -->
       <div class="flex flex-col items-center gap-3 mb-6">
@@ -149,7 +158,7 @@
       </div>
 
       <!-- SECONDARY: manual install command -->
-      <div class="flex flex-col sm:flex-row items-center justify-center gap-3 mb-10">
+      <div class="flex flex-col sm:flex-row items-center justify-center gap-3 mb-4">
         <div class="flex items-center bg-pp-surface border border-slate-600 rounded-lg pl-3 pr-2 py-2 font-mono text-xs">
           <span class="text-slate-500 mr-2">$</span>
           <span class="text-pp-light">npm install react-path-picker</span>
@@ -163,6 +172,17 @@
         </a>
       </div>
 
+      <!-- Trust signals -->
+      <div class="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 mb-10 text-[11px] font-mono text-slate-500">
+        <a href="https://www.npmjs.com/package/react-path-picker" target="_blank" rel="noopener" class="hover:text-pp-light transition">npm v0.1.4</a>
+        <span class="text-slate-700">·</span>
+        <span>MIT License</span>
+        <span class="text-slate-700">·</span>
+        <span class="inline-flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full bg-pp inline-block"></span>Dev-only by design</span>
+        <span class="text-slate-700">·</span>
+        <span>Zero production footprint</span>
+      </div>
+
       <!-- Demo video -->
       <video src="./path-picker-demo.mp4" autoplay loop muted playsinline
              preload="metadata" poster="./path-picker-demo-poster.png"
@@ -170,33 +190,46 @@
         Your browser does not support video.
       </video>
 
-      <!-- Output example -->
-      <div class="max-w-3xl mx-auto space-y-3">
-        <div class="bg-pp-dark border border-slate-700 rounded-xl p-4 text-left overflow-x-auto">
-          <div class="flex items-center gap-2 mb-2">
-            <span class="w-1.5 h-1.5 rounded-full bg-blue-400 inline-block"></span>
-            <span class="text-[10px] font-mono text-slate-500 uppercase tracking-wider">React / Next.js app</span>
+      <!-- BEFORE / AFTER comparison -->
+      <div class="max-w-4xl mx-auto">
+        <p class="text-[11px] uppercase tracking-wider text-slate-500 font-mono text-center mb-4">The difference, in one screen</p>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <!-- BEFORE -->
+          <div class="bg-pp-dark/70 border border-rose-900/40 rounded-xl p-5 text-left">
+            <div class="flex items-center gap-2 mb-3">
+              <span class="w-5 h-5 rounded-full bg-rose-500/15 text-rose-400 flex items-center justify-center text-xs">✕</span>
+              <span class="text-[10px] uppercase tracking-wider text-rose-400/80 font-mono">Without — what you usually type</span>
+            </div>
+            <p class="text-sm text-slate-400 leading-relaxed italic">
+              "the buy button on the checkout page — the green one, second from the right, inside the sticky bottom bar… not the one in the header…"
+            </p>
+            <div class="mt-4 pt-3 border-t border-rose-900/30 flex items-center justify-between text-[10px] font-mono">
+              <span class="text-rose-400/70">~80 tokens</span>
+              <span class="text-rose-400/70">still ambiguous</span>
+            </div>
           </div>
-          <div class="font-mono text-xs sm:text-sm text-slate-400 whitespace-nowrap">
-            <span class="text-slate-500">[xPathInfo]</span>
-            <span class="text-slate-400"> Route:</span> <span class="text-pp-light">/dashboard</span><span class="text-slate-500">,</span>
-            <span class="text-slate-400"> XPath:</span> <span class="text-pp">/html/body/div[2]/main</span><span class="text-slate-500">,</span>
-            <span class="text-slate-400"> CSS:</span> <span class="text-pp">main.layout-content</span><span class="text-slate-500">,</span>
-            <span class="text-slate-400"> React:</span> <span class="text-pp-light">DashboardPage</span> <span class="text-slate-500">(app/dashboard/page.tsx)</span>
+          <!-- AFTER -->
+          <div class="bg-pp-dark/70 border border-pp/40 rounded-xl p-5 text-left shadow-lg shadow-pp/10">
+            <div class="flex items-center gap-2 mb-3">
+              <span class="w-5 h-5 rounded-full bg-pp/20 text-pp flex items-center justify-center text-xs">✓</span>
+              <span class="text-[10px] uppercase tracking-wider text-pp font-mono">With — one click, paste this</span>
+            </div>
+            <p class="font-mono text-xs text-slate-300 leading-relaxed break-all">
+              <span class="text-slate-500">[xPathInfo]</span>
+              <span class="text-slate-400"> Route:</span> <span class="text-pp-light">/checkout</span><span class="text-slate-500">,</span>
+              <span class="text-slate-400"> XPath:</span> <span class="text-pp">/html/body/div[2]/footer/button[2]</span><span class="text-slate-500">,</span>
+              <span class="text-slate-400"> CSS:</span> <span class="text-pp">button.btn-primary</span><span class="text-slate-500">,</span>
+              <span class="text-slate-400"> React:</span> <span class="text-pp-light">BuyButton</span> <span class="text-slate-500">(components/BuyButton.tsx)</span>
+            </p>
+            <div class="mt-4 pt-3 border-t border-pp/20 flex items-center justify-between text-[10px] font-mono">
+              <span class="text-pp/80">1 paste</span>
+              <span class="text-pp/80">unambiguous · paste-ready</span>
+            </div>
           </div>
         </div>
-        <div class="bg-pp-dark border border-slate-700/50 rounded-xl p-4 text-left overflow-x-auto">
-          <div class="flex items-center gap-2 mb-2">
-            <span class="w-1.5 h-1.5 rounded-full bg-pp inline-block"></span>
-            <span class="text-[10px] font-mono text-slate-500 uppercase tracking-wider">Any web page (core API)</span>
-          </div>
-          <div class="font-mono text-xs sm:text-sm text-slate-400 whitespace-nowrap">
-            <span class="text-slate-500">[xPathInfo]</span>
-            <span class="text-slate-400"> Route:</span> <span class="text-pp-light">/about</span><span class="text-slate-500">,</span>
-            <span class="text-slate-400"> XPath:</span> <span class="text-pp">//*[@id="hero"]/div/h1</span><span class="text-slate-500">,</span>
-            <span class="text-slate-400"> CSS:</span> <span class="text-pp">#hero &gt; div &gt; h1</span>
-          </div>
-        </div>
+        <p class="text-[11px] text-slate-500 text-center mt-4">
+          Plain HTML / non-React pages get <span class="font-mono text-slate-400">Route, XPath, CSS</span> via the framework-agnostic core.
+        </p>
       </div>
     </div>
   </section>
@@ -261,28 +294,25 @@
         </div>
       </div>
 
-      <!-- Output comparison -->
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div class="bg-pp-dark border border-slate-700 rounded-xl p-4">
-          <div class="flex items-center gap-2 mb-3">
-            <span class="w-2 h-2 rounded-full bg-slate-500 inline-block"></span>
-            <span class="text-xs font-mono text-slate-400">Plain DOM (core API only)</span>
+      <!-- Where to paste it -->
+      <div class="mt-12">
+        <p class="text-[11px] uppercase tracking-wider text-slate-500 font-mono text-center mb-4">Then paste it into…</p>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <div class="bg-pp-dark border border-slate-700 rounded-xl p-4">
+            <p class="text-xs font-semibold text-pp-light mb-1">Your AI coding agent</p>
+            <p class="text-xs text-slate-400 leading-relaxed">"Make this button 8px taller" — and the agent already knows <em>which</em> button.</p>
           </div>
-          <div class="font-mono text-xs text-slate-400 leading-relaxed">
-            <span class="text-slate-500">[xPathInfo]</span> Route, XPath, CSS
+          <div class="bg-pp-dark border border-slate-700 rounded-xl p-4">
+            <p class="text-xs font-semibold text-pp-light mb-1">A Playwright / Selenium test</p>
+            <p class="text-xs text-slate-400 leading-relaxed">XPath and CSS selector are both valid drop-ins — no DevTools spelunking.</p>
           </div>
-        </div>
-        <div class="bg-pp-dark border border-pp/30 rounded-xl p-4">
-          <div class="flex items-center gap-2 mb-3">
-            <span class="w-2 h-2 rounded-full bg-pp animate-pulse inline-block"></span>
-            <span class="text-xs font-mono text-pp">React / Next.js app</span>
-          </div>
-          <div class="font-mono text-xs text-slate-400 leading-relaxed">
-            <span class="text-slate-500">[xPathInfo]</span> Route, XPath, CSS + <span class="text-pp-light">React component &amp; source path</span>
+          <div class="bg-pp-dark border border-slate-700 rounded-xl p-4">
+            <p class="text-xs font-semibold text-pp-light mb-1">A bug ticket / Slack thread</p>
+            <p class="text-xs text-slate-400 leading-relaxed">Route + component + file path = the engineer knows where to start in 3 seconds.</p>
           </div>
         </div>
       </div>
-      <p class="text-xs text-slate-500 text-center mt-4">React component detection walks the Fiber tree at runtime. Source paths require a small dev-only loader (optional).</p>
+      <p class="text-xs text-slate-500 text-center mt-6">Component &amp; source path require React. Plain HTML pages get <span class="font-mono text-slate-400">Route, XPath, CSS</span> via the core API.</p>
     </div>
   </section>
 
@@ -297,32 +327,81 @@
           <div class="w-10 h-10 rounded-lg bg-pp/10 flex items-center justify-center mb-4">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#329D9C" stroke-width="2"><path d="M4 4l7 9-7 9"/><line x1="12" y1="18" x2="20" y2="18"/></svg>
           </div>
-          <h3 class="text-white font-semibold mb-2">Smart XPath</h3>
-          <p class="text-sm text-slate-400">ID shortcuts and SVG-boundary detection produce minimal, readable expressions.</p>
+          <h3 class="text-white font-semibold mb-2">Selectors agents can use</h3>
+          <p class="text-sm text-slate-400">ID shortcuts and SVG-boundary detection make XPaths short and stable. Drop them straight into Selenium, Playwright, or your agent's prompt.</p>
         </div>
 
         <div class="feature-card bg-pp-surface border border-slate-700 rounded-xl p-6">
           <div class="w-10 h-10 rounded-lg bg-pp/10 flex items-center justify-center mb-4">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#329D9C" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
           </div>
-          <h3 class="text-white font-semibold mb-2">CSS Selector</h3>
-          <p class="text-sm text-slate-400">Unique selectors capped at 5 levels. Auto-filters Ant Design / emotion hash classes like <code class="text-pp text-xs">css-*</code>.</p>
+          <h3 class="text-white font-semibold mb-2">No <code class="text-pp text-xs">css-a8f3d2</code> noise</h3>
+          <p class="text-sm text-slate-400">Auto-filters Ant Design / emotion hash classes and caps depth at 5. Selectors a human can actually read — and your agent can match.</p>
         </div>
 
         <div class="feature-card bg-pp-surface border border-slate-700 rounded-xl p-6">
           <div class="w-10 h-10 rounded-lg bg-pp/10 flex items-center justify-center mb-4">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#329D9C" stroke-width="2"><circle cx="12" cy="12" r="2.5"/><ellipse cx="12" cy="12" rx="10" ry="4"/><ellipse cx="12" cy="12" rx="10" ry="4" transform="rotate(60 12 12)"/><ellipse cx="12" cy="12" rx="10" ry="4" transform="rotate(120 12 12)"/></svg>
           </div>
-          <h3 class="text-white font-semibold mb-2">React Component</h3>
-          <p class="text-sm text-slate-400">Walks the React Fiber tree to find the nearest user component name and (optionally) its source file.</p>
+          <h3 class="text-white font-semibold mb-2">Tells you the file, not just the tag</h3>
+          <p class="text-sm text-slate-400">Walks the React Fiber tree for the nearest user component <em>and</em> its source path — <code class="text-pp text-xs">BuyButton (components/BuyButton.tsx)</code>.</p>
         </div>
 
         <div class="feature-card bg-pp-surface border border-slate-700 rounded-xl p-6">
           <div class="w-10 h-10 rounded-lg bg-pp/10 flex items-center justify-center mb-4">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#329D9C" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
           </div>
-          <h3 class="text-white font-semibold mb-2">Framework-agnostic core</h3>
-          <p class="text-sm text-slate-400">Subpath import <code class="text-pp text-xs">react-path-picker/core</code> exposes <code class="text-pp text-xs">getXPath()</code>, <code class="text-pp text-xs">getCssSelector()</code>, and the inspector class — no React required.</p>
+          <h3 class="text-white font-semibold mb-2">Works on plain HTML too</h3>
+          <p class="text-sm text-slate-400">Subpath <code class="text-pp text-xs">react-path-picker/core</code> runs without React. One <code class="text-pp text-xs">esm.sh</code> line and any static page has an inspector.</p>
+        </div>
+      </div>
+
+      <!-- vs alternatives -->
+      <div class="mt-16">
+        <p class="text-[11px] uppercase tracking-wider text-slate-500 font-mono text-center mb-4">vs the alternatives you already have</p>
+        <div class="overflow-x-auto rounded-xl border border-slate-700 bg-pp-surface/40 max-w-3xl mx-auto">
+          <table class="w-full text-sm text-left">
+            <thead>
+              <tr class="text-slate-400 bg-pp-dark/60 text-[11px] uppercase tracking-wider">
+                <th class="font-medium px-4 py-3"></th>
+                <th class="font-medium px-3 py-3 text-center">Browser<br/>Inspect</th>
+                <th class="font-medium px-3 py-3 text-center">React<br/>DevTools</th>
+                <th class="font-medium px-3 py-3 text-center text-pp">react-<br/>path-picker</th>
+              </tr>
+            </thead>
+            <tbody class="text-slate-300 divide-y divide-slate-700 text-xs">
+              <tr>
+                <td class="px-4 py-3">XPath + CSS selector in one click</td>
+                <td class="px-3 py-3 text-center text-slate-500">partial</td>
+                <td class="px-3 py-3 text-center text-slate-600">—</td>
+                <td class="px-3 py-3 text-center text-pp font-bold">✓</td>
+              </tr>
+              <tr>
+                <td class="px-4 py-3">React component name <em>and</em> source file</td>
+                <td class="px-3 py-3 text-center text-slate-600">—</td>
+                <td class="px-3 py-3 text-center text-slate-500">partial</td>
+                <td class="px-3 py-3 text-center text-pp font-bold">✓</td>
+              </tr>
+              <tr>
+                <td class="px-4 py-3">Single-line clipboard format for AI prompts</td>
+                <td class="px-3 py-3 text-center text-slate-600">—</td>
+                <td class="px-3 py-3 text-center text-slate-600">—</td>
+                <td class="px-3 py-3 text-center text-pp font-bold">✓</td>
+              </tr>
+              <tr>
+                <td class="px-4 py-3">Filters CSS-in-JS hash classes</td>
+                <td class="px-3 py-3 text-center text-slate-600">—</td>
+                <td class="px-3 py-3 text-center text-slate-600">—</td>
+                <td class="px-3 py-3 text-center text-pp font-bold">✓</td>
+              </tr>
+              <tr>
+                <td class="px-4 py-3">Works on plain HTML / non-React pages</td>
+                <td class="px-3 py-3 text-center text-pp">✓</td>
+                <td class="px-3 py-3 text-center text-slate-600">—</td>
+                <td class="px-3 py-3 text-center text-pp font-bold">✓ <span class="text-slate-500 font-normal">(core)</span></td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </div>
     </div>
@@ -332,7 +411,16 @@
   <section id="quickstart" class="py-20 px-4">
     <div class="max-w-4xl mx-auto">
       <h2 class="text-3xl font-bold text-white text-center mb-4">Quick Start</h2>
-      <p class="text-slate-400 text-center mb-8 max-w-2xl mx-auto">Pick one. The Prompt tab is the default — your AI agent does the wiring for you.</p>
+      <p class="text-slate-400 text-center mb-6 max-w-2xl mx-auto">Pick one. The Prompt tab is the default — your AI agent does the wiring for you.</p>
+
+      <!-- Production-safe callout -->
+      <div class="max-w-2xl mx-auto mb-8 flex items-start gap-3 px-4 py-3 rounded-xl border border-pp/30 bg-pp/5">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#56C596" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mt-0.5 flex-shrink-0"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        <div class="text-xs text-slate-300 leading-relaxed">
+          <span class="text-pp-light font-semibold">Production-safe by design.</span>
+          A single <code class="text-pp font-mono">process.env.NODE_ENV</code> guard keeps the picker out of your production bundle. End users never see it; tree-shaking removes the runtime entirely.
+        </div>
+      </div>
 
       <!-- TOP-LEVEL MODE TABS -->
       <div class="flex flex-wrap gap-2 mb-8 justify-center">
