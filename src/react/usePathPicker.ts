@@ -14,12 +14,10 @@ async function copyToClipboard(text: string): Promise<boolean> {
 }
 
 export function formatResult(r: PathPickerResult): string {
-  const lines = [
-    '[xPathInfo]',
-    `Route: ${r.route}`,
-    `XPath: ${r.xpath}`,
-    `CSS: ${r.cssSelector}`,
-  ];
+  const lines = ['[xPathInfo]'];
+  if (r.origin) lines.push(`Origin: ${r.origin}`);
+  if (r.project) lines.push(`Project: ${r.project}`);
+  lines.push(`Route: ${r.route}`, `XPath: ${r.xpath}`, `CSS: ${r.cssSelector}`);
   if (r.reactComponent) {
     const src = r.reactSource ? ` (${r.reactSource})` : '';
     lines.push(`React: ${r.reactComponent}${src}`);
@@ -30,6 +28,12 @@ export function formatResult(r: PathPickerResult): string {
 export interface UsePathPickerOptions {
   /** Current route. Defaults to window.location.pathname when omitted. */
   pathname?: string;
+  /**
+   * Which codebase this app is, e.g. `"acme-web"` or `"/Users/me/dev/acme/webapp"`.
+   * Copied output includes it so an agent working across repos knows where to look.
+   * Omit to auto-derive the repo root from React's dev source info.
+   */
+  project?: string;
   /** Custom handler invoked after a successful pick. Defaults to clipboard copy. */
   onPick?: (result: PathPickerResult, formatted: string) => void;
 }
@@ -37,7 +41,7 @@ export interface UsePathPickerOptions {
 export function usePathPicker(options?: string | UsePathPickerOptions) {
   const opts: UsePathPickerOptions =
     typeof options === 'string' ? { pathname: options } : options ?? {};
-  const { pathname, onPick: onPickProp } = opts;
+  const { pathname, project, onPick: onPickProp } = opts;
 
   const [isActive, setIsActive] = useState(false);
   const [justCopied, setJustCopied] = useState(false);
@@ -48,6 +52,8 @@ export function usePathPicker(options?: string | UsePathPickerOptions) {
     () => pathname ?? (typeof window !== 'undefined' ? window.location.pathname : '/'),
     [pathname],
   );
+
+  const getProject = useCallback(() => project ?? null, [project]);
 
   const handlePick = useCallback(
     (result: PathPickerResult) => {
@@ -85,11 +91,12 @@ export function usePathPicker(options?: string | UsePathPickerOptions) {
       onPick: handlePick,
       onCancel: handleCancel,
       getRoute,
+      getProject,
     });
     inspectorRef.current = inspector;
     inspector.activate();
     return () => inspector.deactivate();
-  }, [isActive, handlePick, handleCancel, getRoute]);
+  }, [isActive, handlePick, handleCancel, getRoute, getProject]);
 
   useEffect(() => {
     return () => {

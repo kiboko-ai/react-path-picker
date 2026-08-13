@@ -216,6 +216,8 @@
             </div>
             <p class="font-mono text-xs text-slate-300 leading-relaxed break-all">
               <span class="text-slate-500">[xPathInfo]</span>
+              <span class="text-slate-400"> Origin:</span> <span class="text-pp-light">http://localhost:3000</span><span class="text-slate-500">,</span>
+              <span class="text-slate-400"> Project:</span> <span class="text-pp-light">~/dev/acme/webapp</span><span class="text-slate-500">,</span>
               <span class="text-slate-400"> Route:</span> <span class="text-pp-light">/checkout</span><span class="text-slate-500">,</span>
               <span class="text-slate-400"> XPath:</span> <span class="text-pp">/html/body/div[2]/footer/button[2]</span><span class="text-slate-500">,</span>
               <span class="text-slate-400"> CSS:</span> <span class="text-pp">button.btn-primary</span><span class="text-slate-500">,</span>
@@ -474,7 +476,7 @@ and copies [xPathInfo] Route, XPath, CSS to the clipboard on pick:
       getRoute: () =&gt; location.pathname,
       onPick: (r) =&gt; {
         navigator.clipboard?.writeText(
-          `[xPathInfo] Route: ${r.route}, XPath: ${r.xpath}, CSS: ${r.cssSelector}`
+          `[xPathInfo], Origin: ${r.origin}, Route: ${r.route}, XPath: ${r.xpath}, CSS: ${r.cssSelector}`
         );
         reset();
       },
@@ -891,12 +893,14 @@ console.log(getCssSelector(el));  // main.layout-content</code></pre>
       }
 
       function format(r) {
-        const parts = [
-          '[xPathInfo]',
+        const parts = ['[xPathInfo]'];
+        if (r.origin) parts.push('Origin: ' + r.origin);
+        if (r.project) parts.push('Project: ' + r.project);
+        parts.push(
           'Route: ' + r.route,
           'XPath: ' + r.xpath,
           'CSS: ' + r.cssSelector,
-        ];
+        );
         if (r.reactComponent) {
           const src = r.reactSource ? ' (' + r.reactSource + ')' : '';
           parts.push('React: ' + r.reactComponent + src);

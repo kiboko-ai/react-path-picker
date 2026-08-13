@@ -7,7 +7,7 @@ Stop describing UI elements to your AI agent. Click any element on your dev buil
 🌐 **[Live demo & docs →](https://kiboko-ai.github.io/react-path-picker/)**
 
 ```
-[xPathInfo] Route: /dashboard, XPath: /html/body/div[2]/main, CSS: main.layout-content, React: DashboardPage (app/dashboard/page.tsx)
+[xPathInfo], Origin: http://localhost:3000, Project: /Users/me/dev/acme/webapp, Route: /dashboard, XPath: /html/body/div[2]/main, CSS: main.layout-content, React: DashboardPage (app/dashboard/page.tsx)
 ```
 
 ## How it works
@@ -23,6 +23,7 @@ Three clicks. From mystery DOM node to a clipboard-ready snippet your agent can 
 - **Smart XPath** — ID shortcuts and SVG-boundary detection produce minimal, readable expressions.
 - **Unique CSS selector** — capped at 5 levels, auto-filters Ant Design / emotion `css-*` hash classes.
 - **React component detection** — walks the React Fiber tree at runtime to find the nearest user component name and (with a small dev-only loader) its source file.
+- **Knows which app it came from** — every pick carries the page `Origin` and the `Project` root, so an agent juggling several repos never patches the wrong one. The root is derived from React's dev source info; override it with the `project` prop when you want a name instead of a path.
 - **Framework-agnostic core** — `react-path-picker/core` exposes `PathPickerInspector`, `getXPath()`, `getCssSelector()`, and `getReactComponent()`. No React required — works in plain HTML too via esm.sh.
 
 ## Quick Start
@@ -76,7 +77,7 @@ copies `[xPathInfo] Route, XPath, CSS` to the clipboard on pick:
       getRoute: () => location.pathname,
       onPick: (r) => {
         navigator.clipboard?.writeText(
-          `[xPathInfo] Route: ${r.route}, XPath: ${r.xpath}, CSS: ${r.cssSelector}`
+          `[xPathInfo], Origin: ${r.origin}, Route: ${r.route}, XPath: ${r.xpath}, CSS: ${r.cssSelector}`
         );
         reset();
       },
@@ -163,6 +164,7 @@ import { PathPickerInspector, getXPath, getCssSelector } from 'react-path-picker
 
 const inspector = new PathPickerInspector({
   getRoute: () => window.location.pathname,
+  getProject: () => 'acme-web', // optional — omit to auto-derive from React dev source info
   onPick: (result) => console.log(result),
   onCancel: () => console.log('cancelled'),
 });
@@ -177,6 +179,7 @@ inspector.activate();
 | Prop | Type | Default | Description |
 |---|---|---|---|
 | `pathname` | `string` | `window.location.pathname` | Route text copied to clipboard |
+| `project` | `string` | repo root from React dev source info | Which codebase this app is, e.g. `"acme-web"` or an absolute path |
 | `color` | `string` | `#329D9C` | Active accent color |
 | `onPick` | `(result, formatted) => void` | clipboard copy | Custom handler invoked after a successful pick |
 

@@ -27,19 +27,54 @@ interface FiberNode {
 
 const SOURCE_MARKERS = ['/src/', '/app/', '/pages/', '/components/'];
 
-function relativizePath(abs: string): string {
-  for (const m of SOURCE_MARKERS) {
-    const idx = abs.indexOf(m);
-    if (idx >= 0) return abs.slice(idx + 1);
-  }
-  const parts = abs.split('/').filter(Boolean);
-  return parts.length > 3 ? parts.slice(-3).join('/') : abs;
+interface SplitPath {
+  /** Everything before the source marker — the project/repo root. null when the path is already relative. */
+  root: string | null;
+  /** Path from the source marker down, e.g. `src/app/page.tsx`. */
+  relative: string;
 }
 
-function formatDebugSource(src: DebugSource): string {
-  const path = relativizePath(src.fileName);
+/** Dev servers hand out `webpack-internal:///./src/app/page.tsx`, `file:///Users/…`. Strip that. */
+function normalizeSourcePath(raw: string): string {
+  return raw.replace(/^[a-z][a-z0-9+.-]*:\/\//i, '').replace(/^\/?\.\//, '');
+}
+
+function isAbsolutePath(p: string): boolean {
+  return p.startsWith('/') || /^[A-Za-z]:[\\/]/.test(p);
+}
+
+/**
+ * Split a JSX call-site path into project root + in-project path.
+ * `/Volumes/Data/dev/acme/webapp/src/app/page.tsx`
+ *   → { root: '/Volumes/Data/dev/acme/webapp', relative: 'src/app/page.tsx' }
+ *
+ * A root is only reported for absolute paths — bundlers that emit paths already
+ * relative to the project have no root to give, and slicing one out invents it.
+ */
+function splitSourcePath(raw: string): SplitPath {
+  const path = normalizeSourcePath(raw);
+  const absolute = isAbsolutePath(path);
+
+  for (const m of SOURCE_MARKERS) {
+    const idx = path.indexOf(m);
+    if (idx < 0) continue;
+    if (!absolute) return { root: null, relative: path };
+    return { root: path.slice(0, idx) || null, relative: path.slice(idx + 1) };
+  }
+
+  const parts = path.split('/').filter(Boolean);
+  if (absolute && parts.length > 3) {
+    const relative = parts.slice(-3).join('/');
+    const root = path.slice(0, path.length - relative.length - 1);
+    return { root: root || null, relative };
+  }
+  return { root: null, relative: path };
+}
+
+function formatDebugSource(src: DebugSource): { text: string; root: string | null } {
+  const { root, relative } = splitSourcePath(src.fileName);
   const col = typeof src.columnNumber === 'number' ? `:${src.columnNumber}` : '';
-  return `${path}:${src.lineNumber}${col}`;
+  return { text: `${relative}:${src.lineNumber}${col}`, root };
 }
 
 function getFiberKey(el: Element): string | null {
@@ -92,17 +127,28 @@ function findNearestDevBadge(el: Element): { name: string; source: string } | nu
   return null;
 }
 
-export function getReactComponent(
-  el: Element,
-): { name: string; source: string | null } | null {
+export interface ReactComponentInfo {
+  name: string;
+  source: string | null;
+  /** Absolute project root the source lives under. Dev-only — null when `_debugSource` is stripped. */
+  projectRoot: string | null;
+}
+
+export function getReactComponent(el: Element): ReactComponentInfo | null {
   const key = getFiberKey(el);
 
   if (key) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let fiber: FiberNode | null = (el as any)[key] as FiberNode;
 
-    let elementSource: string | null = null;
-    let component: { name: string; fiberSource: string | null; buildTimeSource: string | null } | null = null;
+    let elementSource: { text: string; root: string | null } | null = null;
+    let component:
+      | {
+          name: string;
+          fiberSource: { text: string; root: string | null } | null;
+          buildTimeSource: string | null;
+        }
+      | null = null;
 
     while (fiber) {
       if (!elementSource && fiber._debugSource) {
@@ -127,13 +173,14 @@ export function getReactComponent(
     }
 
     if (component) {
-      const source = elementSource || component.buildTimeSource || component.fiberSource;
-      return { name: component.name, source };
+      const fromFiber = elementSource || component.fiberSource;
+      const source = elementSource?.text || component.buildTimeSource || component.fiberSource?.text || null;
+      return { name: component.name, source, projectRoot: fromFiber?.root ?? null };
     }
   }
 
   const badge = findNearestDevBadge(el);
-  if (badge) return { name: badge.name, source: badge.source };
+  if (badge) return { name: badge.name, source: badge.source, projectRoot: null };
 
   return null;
 }

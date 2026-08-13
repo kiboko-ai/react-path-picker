@@ -259,6 +259,8 @@ export class PathPickerInspector {
     const textContent = truncate(el.textContent || '', 50);
 
     return {
+      origin: typeof window !== 'undefined' ? window.location.origin : '',
+      project: this.callbacks.getProject?.() ?? rc?.projectRoot ?? null,
       route: this.callbacks.getRoute(),
       xpath: getXPath(el),
       cssSelector: getCssSelector(el),

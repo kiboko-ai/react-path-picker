@@ -24,6 +24,12 @@ const AimIcon = () => (
 export interface PathPickerButtonProps {
   /** Current route. Pass usePathname() in Next.js, useLocation().pathname in React Router, etc. */
   pathname?: string;
+  /**
+   * Which codebase this app is, e.g. `"acme-web"` or `"/Users/me/dev/acme/webapp"`.
+   * Copied output includes it so an agent working across repos knows where to look.
+   * Omit to auto-derive the repo root from React's dev source info.
+   */
+  project?: string;
   /** Active accent color (default: #329D9C). */
   color?: string;
   /** Custom handler invoked after a successful pick (default: clipboard copy). */
@@ -32,11 +38,12 @@ export interface PathPickerButtonProps {
 
 export function PathPickerButton({
   pathname,
+  project,
   color = '#329D9C',
   onPick,
 }: PathPickerButtonProps) {
   const [hovered, setHovered] = useState(false);
-  const { isActive, justCopied, toggle } = usePathPicker({ pathname, onPick });
+  const { isActive, justCopied, toggle } = usePathPicker({ pathname, project, onPick });
 
   const label = justCopied ? 'Copied!' : isActive ? 'Pick…' : null;
 
