@@ -4,6 +4,7 @@ dist/
 coverage/
 .vite/
 .DS_Store
+*.log
 
 # Secrets / local config
 .env
