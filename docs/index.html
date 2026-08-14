@@ -174,7 +174,7 @@
 
       <!-- Trust signals -->
       <div class="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 mb-10 text-[11px] font-mono text-slate-500">
-        <a href="https://www.npmjs.com/package/react-path-picker" target="_blank" rel="noopener" class="hover:text-pp-light transition">npm v0.1.4</a>
+        <a id="npm-version" href="https://www.npmjs.com/package/react-path-picker" target="_blank" rel="noopener" class="hover:text-pp-light transition">npm v0.1.9</a>
         <span class="text-slate-700">·</span>
         <span>MIT License</span>
         <span class="text-slate-700">·</span>
@@ -289,7 +289,7 @@
             <div class="w-8 h-8 rounded-lg bg-pp/20 flex items-center justify-center text-pp font-mono text-sm font-bold">3</div>
             <p class="text-white font-semibold text-sm">Click to copy</p>
           </div>
-          <p class="text-sm text-slate-400 mb-4">Route, XPath, CSS selector, and React component name &amp; source path land on your clipboard in one line.</p>
+          <p class="text-sm text-slate-400 mb-4">Origin, project root, route, XPath, CSS selector, and React component name &amp; source path land on your clipboard in one line.</p>
           <div class="bg-pp-dark border border-pp/40 rounded-lg h-20 flex items-center justify-center text-xs text-pp-light font-mono">
             &check; Copied to clipboard
           </div>
@@ -581,6 +581,19 @@ export function DevPathPicker() {
 }</code></pre>
           </div>
         </div>
+
+        <!-- project prop -->
+        <div class="mt-8 rounded-xl border border-slate-700 bg-pp-surface/40 p-5">
+          <p class="text-sm text-slate-300 mb-2">
+            Working across several repos? Add
+            <code class="text-pp font-mono text-xs">project</code> so every pick says which codebase it came from.
+          </p>
+          <pre class="!mt-3 !mb-0"><code class="language-tsx">&lt;PathPickerButton pathname={pathname} project="acme-web" /&gt;</code></pre>
+          <p class="text-xs text-slate-500 mt-3">
+            Omit it and the repo root is derived from React's dev source info —
+            <span class="font-mono text-slate-400">Project: /Users/me/dev/acme/webapp</span>.
+          </p>
+        </div>
       </div>
     </div>
   </section>
@@ -607,10 +620,11 @@ export function DevPathPicker() {
 
 const inspector = new PathPickerInspector({
   getRoute: () =&gt; window.location.pathname,
+  getProject: () =&gt; 'acme-web', // optional — omit to auto-derive from React dev source info
   onPick: (result) =&gt; {
     console.log('[xPathInfo]', result);
-    // result: { route, xpath, cssSelector, tagName, id, textContent,
-    //          reactComponent, reactSource }
+    // result: { origin, project, route, xpath, cssSelector, tagName, id,
+    //          textContent, reactComponent, reactSource }
   },
   onCancel: () =&gt; console.log('cancelled'),
 });
@@ -636,12 +650,12 @@ console.log(getCssSelector(el));  // main.layout-content</code></pre>
           <tbody class="text-slate-300 divide-y divide-slate-700">
             <tr>
               <td class="font-mono text-pp text-xs px-4 py-3">PathPickerButton</td>
-              <td class="font-mono text-xs text-slate-400 px-4 py-3">{ pathname?, color? }</td>
+              <td class="font-mono text-xs text-slate-400 px-4 py-3">{ pathname?, project?, color?, onPick? }</td>
               <td class="text-xs px-4 py-3">React button + overlay. Drop into your dev layout.</td>
             </tr>
             <tr>
               <td class="font-mono text-pp text-xs px-4 py-3">usePathPicker</td>
-              <td class="font-mono text-xs text-slate-400 px-4 py-3">(pathname?) =&gt; { isActive, justCopied, toggle }</td>
+              <td class="font-mono text-xs text-slate-400 px-4 py-3">(options?) =&gt; { isActive, justCopied, toggle }</td>
               <td class="text-xs px-4 py-3">Hook for building your own UI.</td>
             </tr>
             <tr>
@@ -756,6 +770,15 @@ console.log(getCssSelector(el));  // main.layout-content</code></pre>
     }
 
     if (window.Prism) Prism.highlightAll();
+
+    // 배지가 릴리스마다 밀리지 않도록 레지스트리에서 실제 최신 버전을 받아 덮어쓴다.
+    fetch('https://registry.npmjs.org/react-path-picker/latest')
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        var el = document.getElementById('npm-version');
+        if (el && d && d.version) el.textContent = 'npm v' + d.version;
+      })
+      .catch(function () {});
   </script>
 
   <!-- ========== LIVE DEMO: react-path-picker via esm.sh ========== -->

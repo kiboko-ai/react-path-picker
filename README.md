@@ -14,9 +14,9 @@ Stop describing UI elements to your AI agent. Click any element on your dev buil
 
 Three clicks. From mystery DOM node to a clipboard-ready snippet your agent can paste straight into a fix:
 
-1. **Click the aim icon** in the top-right of your dev build.
+1. **Click the aim icon** in the top-right of your dev build, or press `Alt+P`.
 2. **Hover any element.** A teal overlay highlights it with a tooltip showing its tag, classes, and detected component.
-3. **Click to copy.** Route, XPath, CSS selector, and React component name + source path land on your clipboard.
+3. **Click to copy.** Origin, project root, route, XPath, CSS selector, and React component name + source path land on your clipboard.
 
 ## Features
 
@@ -24,6 +24,8 @@ Three clicks. From mystery DOM node to a clipboard-ready snippet your agent can 
 - **Unique CSS selector** — capped at 5 levels, auto-filters Ant Design / emotion `css-*` hash classes.
 - **React component detection** — walks the React Fiber tree at runtime to find the nearest user component name and (with a small dev-only loader) its source file.
 - **Knows which app it came from** — every pick carries the page `Origin` and the `Project` root, so an agent juggling several repos never patches the wrong one. The root is derived from React's dev source info; override it with the `project` prop when you want a name instead of a path.
+- **Picks what a normal click can't** — disabled buttons and inputs, and elements inside popovers, dropdowns, and menus that would close the moment you press. While picking, the page never sees the press: nothing closes, nothing submits, nothing navigates.
+- **Keyboard shortcut** — `Alt+P` arms the picker without a click, so anything hover- or focus-driven stays on screen. Change it with the `hotkey` prop, or pass `false` to turn it off.
 - **Framework-agnostic core** — `react-path-picker/core` exposes `PathPickerInspector`, `getXPath()`, `getCssSelector()`, and `getReactComponent()`. No React required — works in plain HTML too via esm.sh.
 
 ## Quick Start
@@ -182,6 +184,15 @@ inspector.activate();
 | `project` | `string` | repo root from React dev source info | Which codebase this app is, e.g. `"acme-web"` or an absolute path |
 | `color` | `string` | `#329D9C` | Active accent color |
 | `onPick` | `(result, formatted) => void` | clipboard copy | Custom handler invoked after a successful pick |
+| `hotkey` | `string \| false` | `"alt+p"` | Keyboard shortcut that toggles picking, e.g. `"ctrl+shift+k"`. `false` disables it |
+
+### Picking inside popovers and menus
+
+Overlays usually close on the press that opens the pick — `mousedown` for antd/rc-trigger, `pointerdown` for Radix. While the picker is armed it swallows the whole press before the page sees it, so the overlay stays put and the element you highlighted is the one you get. Disabled controls work the same way, even though the browser normally fires no press events on them at all.
+
+Arming the picker is safe too — `PathPickerButton` keeps its own press off the page, so an open dropdown survives the click on the aim icon. If you built your own UI on `usePathPicker`, that press is yours to handle; reach for `Alt+P` instead.
+
+Still out of reach: a tooltip rendered in a portal with `pointer-events: none`. It isn't under the cursor as far as the browser is concerned, and it has no parent to trace it back from, so the picker sees whatever sits behind it.
 
 ### Exports
 
@@ -197,6 +208,18 @@ npm test
 npm run build
 npm pack
 ```
+
+### Playground
+
+```bash
+npm run playground     # builds dist/, serves http://localhost:5174
+```
+
+A local page wired to your `dist/` build — not the published package — so you can click through the
+cases that are hard to unit-test: native and library-styled disabled controls, dropdowns that close on
+`mousedown`, Radix-style popovers that close on `pointerdown`, hover tooltips, and a modal backdrop.
+A panel on the right logs every event the page actually received, so anything leaking through the
+picker shows up in red. Needs network the first time — React loads from esm.sh.
 
 ## License
 
