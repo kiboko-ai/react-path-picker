@@ -1,7 +1,18 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { usePathPicker, type UsePathPickerOptions } from './usePathPicker';
+
+/** 버튼 위에서 페이지로 새어 나가면 안 되는 이벤트. */
+const PRESS_EVENTS = ['pointerdown', 'mousedown', 'pointerup', 'mouseup', 'click'] as const;
+
+const formatHotkey = (spec: string) =>
+  spec
+    .split('+')
+    .map((p) => p.trim())
+    .filter(Boolean)
+    .map((p) => p.charAt(0).toUpperCase() + p.slice(1))
+    .join('+');
 
 const AimIcon = () => (
   <svg
@@ -34,6 +45,11 @@ export interface PathPickerButtonProps {
   color?: string;
   /** Custom handler invoked after a successful pick (default: clipboard copy). */
   onPick?: UsePathPickerOptions['onPick'];
+  /**
+   * Keyboard shortcut that toggles picking — `"alt+p"` by default. Reach for it when clicking
+   * the button would close what you want to pick, like an open dropdown. `false` disables it.
+   */
+  hotkey?: UsePathPickerOptions['hotkey'];
 }
 
 export function PathPickerButton({
@@ -41,14 +57,54 @@ export function PathPickerButton({
   project,
   color = '#329D9C',
   onPick,
+  hotkey,
 }: PathPickerButtonProps) {
   const [hovered, setHovered] = useState(false);
-  const { isActive, justCopied, toggle } = usePathPicker({ pathname, project, onPick });
+  const rootRef = useRef<HTMLDivElement>(null);
+  const { isActive, justCopied, toggle } = usePathPicker({ pathname, project, onPick, hotkey });
+
+  const toggleRef = useRef(toggle);
+  toggleRef.current = toggle;
+
+  // 버튼을 누르는 것 자체가 페이지 입장에선 outside-click 이라, 열어둔 popover 가 픽을 시작하기도
+  // 전에 닫혀 버린다. window capture 에서 눌림을 통째로 삼키고 토글은 여기서 직접 건다.
+  useEffect(() => {
+    // pointerdown 에서 preventDefault 하면 뒤따르는 mousedown·mouseup·click 이 통째로 사라진다.
+    // 그래서 토글은 실제로 도착하는 첫 눌림에서 건다.
+    const downType = typeof PointerEvent === 'undefined' ? 'mousedown' : 'pointerdown';
+
+    const shield = (e: Event) => {
+      const root = rootRef.current;
+      if (!root || !(e.target instanceof Node) || !root.contains(e.target)) return;
+      // 키보드로 누른 click(detail 0)은 아래 onClick 이 받아야 하므로 통과.
+      if (e.type === 'click' && (e as MouseEvent).detail === 0) return;
+
+      e.preventDefault();
+      e.stopPropagation();
+      e.stopImmediatePropagation();
+
+      const el = e.target instanceof Element ? e.target : e.target.parentElement;
+      if (
+        e.type === downType &&
+        (e as MouseEvent).button === 0 &&
+        el?.closest('[data-pathpicker-toggle]')
+      ) {
+        toggleRef.current();
+      }
+    };
+
+    for (const type of PRESS_EVENTS) window.addEventListener(type, shield, true);
+    return () => {
+      for (const type of PRESS_EVENTS) window.removeEventListener(type, shield, true);
+    };
+  }, []);
 
   const label = justCopied ? 'Copied!' : isActive ? 'Pick…' : null;
+  const hotkeyLabel = hotkey === false ? null : formatHotkey(hotkey ?? 'alt+p');
 
   return (
     <div
+      ref={rootRef}
       data-pathpicker-ignore=""
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
@@ -79,8 +135,9 @@ export function PathPickerButton({
         </span>
       )}
       <button
+        data-pathpicker-toggle=""
         onClick={toggle}
-        title="xPathInfo: pick an element to copy"
+        title={`xPathInfo: pick an element to copy${hotkeyLabel ? ` (${hotkeyLabel})` : ''}`}
         style={{
           width: 24,
           height: 24,
