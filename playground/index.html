@@ -1,0 +1,385 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>react-path-picker · playground</title>
+<script type="importmap">
+{ "imports": {
+  "react": "https://esm.sh/react@18.3.1",
+  "react/jsx-runtime": "https://esm.sh/react@18.3.1/jsx-runtime",
+  "react-dom": "https://esm.sh/react-dom@18.3.1",
+  "react-dom/client": "https://esm.sh/react-dom@18.3.1/client"
+} }
+</script>
+<style>
+  :root {
+    --bg: #0f172a; --surface: #1e293b; --line: #334155;
+    --text: #e2e8f0; --muted: #94a3b8; --accent: #329D9C; --danger: #f43f5e; --ok: #56C596;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 14px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+    padding: 24px 24px 24px; padding-right: 380px;
+  }
+  header { max-width: 900px; margin: 0 auto 28px; }
+  h1 { font-size: 20px; margin: 0 0 6px; }
+  header p { color: var(--muted); margin: 0; font-size: 13px; }
+  .badge {
+    display: inline-block; font: 11px/1 ui-monospace, monospace; color: var(--accent);
+    background: rgba(50,157,156,.12); border: 1px solid rgba(50,157,156,.35);
+    padding: 4px 8px; border-radius: 999px; margin-left: 8px; vertical-align: 2px;
+  }
+  main { max-width: 900px; margin: 0 auto; display: grid; gap: 16px; }
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 18px; }
+  .card h2 { font-size: 14px; margin: 0 0 4px; }
+  .card .why { color: var(--muted); font-size: 12px; margin: 0 0 14px; }
+  .card .expect {
+    margin: 14px 0 0; padding-top: 12px; border-top: 1px dashed var(--line);
+    color: var(--muted); font-size: 12px;
+  }
+  .expect b { color: var(--ok); font-weight: 600; }
+  .row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+  button, input, select {
+    font: inherit; padding: 8px 14px; border-radius: 8px;
+    border: 1px solid var(--line); background: #0b1220; color: var(--text); cursor: pointer;
+  }
+  button:hover:not(:disabled) { border-color: var(--accent); }
+  button:disabled, .is-disabled { opacity: .45; cursor: not-allowed; }
+  .is-disabled { pointer-events: none; }
+  fieldset { border: 1px solid var(--line); border-radius: 8px; padding: 12px; margin: 0; }
+  legend { color: var(--muted); font-size: 12px; padding: 0 6px; }
+
+  .pop {
+    position: absolute; z-index: 50; background: #0b1220; border: 1px solid var(--line);
+    border-radius: 10px; padding: 8px; box-shadow: 0 12px 32px rgba(0,0,0,.55); display: none;
+  }
+  .pop.open { display: block; }
+  .pop button { display: block; width: 100%; text-align: left; border: none; background: transparent; }
+  .pop button:hover { background: rgba(50,157,156,.14); }
+
+  .tip {
+    position: absolute; z-index: 60; background: #000; color: #fff; font-size: 12px;
+    padding: 6px 10px; border-radius: 6px; display: none; white-space: nowrap;
+  }
+  .tip.open { display: block; }
+  .tip.ghost { pointer-events: none; }
+
+  #backdrop {
+    position: fixed; inset: 0; background: rgba(0,0,0,.6); z-index: 100;
+    display: none; align-items: center; justify-content: center;
+  }
+  #backdrop.open { display: flex; }
+  #dialog { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 20px; width: 360px; }
+
+  #hud {
+    position: fixed; top: 52px; right: 16px; width: 340px; max-height: calc(100vh - 72px);
+    background: #0b1220; border: 1px solid var(--line); border-radius: 12px;
+    display: flex; flex-direction: column; overflow: hidden; z-index: 200;
+  }
+  #hud h3 { font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted);
+            margin: 0; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+  #pick { padding: 10px 12px; font: 11px/1.5 ui-monospace, monospace; color: var(--accent);
+          word-break: break-all; border-bottom: 1px solid var(--line); min-height: 40px; }
+  #log { flex: 1; overflow: auto; padding: 8px 12px; font: 11px/1.6 ui-monospace, monospace; }
+  #log div { padding: 1px 0; }
+  .l-leak { color: var(--danger); }
+  .l-warn { color: #fbbf24; }
+  .l-pick { color: var(--ok); }
+  .l-info { color: var(--muted); }
+  #clear { margin: 8px 12px 12px; padding: 5px; font-size: 11px; }
+  #mode { display: flex; gap: 8px; align-items: flex-start; padding: 10px 12px;
+          border-bottom: 1px solid var(--line); font-size: 11px; color: var(--muted); }
+  #mode input { width: auto; margin: 2px 0 0; padding: 0; cursor: pointer; }
+  #mode label { cursor: pointer; line-height: 1.45; }
+  #mode code { color: var(--accent); }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>react-path-picker playground <span class="badge" id="build">local dist</span></h1>
+  <p>
+    로컬 <code>dist/</code> 빌드를 그대로 불러온다. 오른쪽 위 ◎ 버튼이나 <b>Alt+P</b> 로 픽커를 켜고
+    아래 항목을 하나씩 눌러봐라. 찍으면 클립보드에 복사되고 오른쪽 패널에 같은 문자열이 뜬다.
+    페이지가 클릭을 보면 로그에 <span style="color:#f43f5e">빨간 줄</span>이 뜬다.
+  </p>
+</header>
+
+<main>
+
+  <div class="card">
+    <h2>1 · Native disabled</h2>
+    <p class="why">브라우저가 disabled 폼 컨트롤 위에서는 눌림 이벤트를 아예 발생시키지 않는다.</p>
+    <div class="row">
+      <button disabled>Disabled button</button>
+      <input disabled value="Disabled input">
+      <fieldset disabled>
+        <legend>fieldset[disabled]</legend>
+        <div class="row"><input value="Inherited disabled"><button>Inherited too</button></div>
+      </fieldset>
+    </div>
+    <p class="expect">기대: 넷 다 하이라이트되고 <b>클릭하면 픽된다</b>. 툴팁에 <code>· disabled</code> 가 붙는다.</p>
+  </div>
+
+  <div class="card">
+    <h2>2 · Library-style disabled</h2>
+    <p class="why">antd·MUI 는 disabled 에 <code>pointer-events: none</code> 을 준다. 예전엔 감싼 div 가 잡혔다.</p>
+    <div class="row">
+      <span id="mui-wrap"><button class="is-disabled">pointer-events:none</button></span>
+      <button aria-disabled="true" id="aria-btn">aria-disabled (still clickable)</button>
+    </div>
+    <p class="expect">기대: 래퍼가 아니라 <b>버튼 자체</b>가 하이라이트·픽된다. CSS 가 <code>#mui-wrap</code> 이 아니어야 한다.</p>
+  </div>
+
+  <div class="card">
+    <h2>3 · Dropdown — closes on document <code>mousedown</code></h2>
+    <p class="why">antd / rc-trigger 방식. 항목을 누르면 메뉴가 닫히면서 액션까지 실행된다.</p>
+    <div class="row"><button id="dd-trigger">Open dropdown</button></div>
+    <div class="pop" id="dd">
+      <button data-action="Edit">Edit</button>
+      <button data-action="Duplicate">Duplicate</button>
+      <button data-action="Delete" disabled>Delete (disabled)</button>
+    </div>
+    <p class="expect">기대: 픽커를 켠 채 항목을 눌러도 <b>메뉴가 안 닫히고</b>, 액션도 안 돈다. disabled 항목도 픽된다.</p>
+  </div>
+
+  <div class="card">
+    <h2>4 · Popover — closes on document <code>pointerdown</code></h2>
+    <p class="why">Radix / headlessui 방식. mousedown 보다도 먼저 닫힌다.</p>
+    <div class="row"><button id="pv-trigger">Open popover</button></div>
+    <div class="pop" id="pv" style="padding:14px">
+      <div style="margin-bottom:8px;font-size:12px;color:var(--muted)">Radix-style content</div>
+      <div class="row"><input value="field inside"><button>Save</button></div>
+    </div>
+    <p class="expect">기대: 픽커를 켜고 안쪽 input·버튼을 <b>그대로 찍을 수 있다</b>.</p>
+  </div>
+
+  <div class="card">
+    <h2>5 · Hover tooltip</h2>
+    <p class="why">마우스가 트리거에서 벗어나면 닫힌다. 픽커는 mousemove 를 막지 않으므로 살아 있어야 한다.</p>
+    <div class="row">
+      <button id="tip-trigger">Hover me (interactive tip)</button>
+      <button id="tip-ghost-trigger">Hover me (pointer-events:none tip)</button>
+    </div>
+    <div class="tip" id="tip">I stay while you pick <b>me</b></div>
+    <div class="tip ghost" id="tip-ghost">I can't be picked — known limit</div>
+    <p class="expect">
+      기대: 첫 번째 툴팁은 <b>떠 있는 채로 찍힌다</b>.
+      두 번째(<code>pointer-events:none</code> + portal)는 <b>못 찍는다 — 알려진 한계</b>.
+    </p>
+  </div>
+
+  <div class="card">
+    <h2>6 · Modal — closes on backdrop click</h2>
+    <p class="why">픽커를 켠 채 backdrop 위를 눌러도 닫히면 안 된다.</p>
+    <div class="row"><button id="modal-open">Open modal</button></div>
+    <p class="expect">기대: 다이얼로그 안 요소도, <b>backdrop 자체도</b> 픽된다. 모달은 안 닫힌다.</p>
+  </div>
+
+  <div class="card">
+    <h2>7 · Side effects that must NOT fire</h2>
+    <p class="why">픽은 페이지에 클릭을 넘기지 않아야 한다.</p>
+    <div class="row">
+      <button id="danger">Fires an action on click</button>
+      <a href="#gone" id="link">A link (would navigate)</a>
+      <form id="form" style="display:inline"><button>Submits a form</button></form>
+    </div>
+    <p class="expect">기대: 픽커가 켜져 있으면 셋 다 <b>로그에 빨간 줄이 안 뜬다</b>. 픽커를 끄면 정상 동작해야 한다.</p>
+  </div>
+
+</main>
+
+<div id="backdrop">
+  <div id="dialog">
+    <h2 style="margin:0 0 6px;font-size:15px">Dialog</h2>
+    <p style="color:var(--muted);font-size:12px;margin:0 0 14px">Click the dim area to close.</p>
+    <div class="row">
+      <input value="Inside dialog">
+      <button disabled>Disabled in dialog</button>
+      <button id="modal-close">Close</button>
+    </div>
+  </div>
+</div>
+
+<div id="hud" data-pathpicker-ignore>
+  <div id="mode">
+    <input type="checkbox" id="use-default">
+    <label for="use-default">
+      <code>onPick</code> 없이 마운트 — 라이브러리 기본 클립보드 복사 경로를 그대로 쓴다.
+      끄면 playground 가 <code>onPick</code> 으로 받아 아래에 찍고 직접 복사한다.
+    </label>
+  </div>
+  <h3>Last pick</h3>
+  <div id="pick">— 아직 없음</div>
+  <h3>Page activity</h3>
+  <div id="log"></div>
+  <button id="clear">Clear log</button>
+</div>
+
+<script type="module">
+const logEl = document.getElementById('log');
+const picking = () => document.body.style.cursor === 'crosshair';
+
+function log(kind, msg) {
+  const d = document.createElement('div');
+  d.className = 'l-' + kind;
+  d.textContent = (picking() ? '◎ ' : '  ') + msg;
+  logEl.appendChild(d);
+  logEl.scrollTop = logEl.scrollHeight;
+}
+/** 픽커가 켜져 있는데 페이지가 이벤트를 봤다면 그건 새어 나간 것. */
+const saw = (msg) => log(picking() ? 'leak' : 'info', msg);
+document.getElementById('clear').onclick = () => (logEl.textContent = '');
+
+const desc = (el) => el.tagName.toLowerCase() + (el.id ? '#' + el.id : '') +
+  (el.className && typeof el.className === 'string' ? '.' + el.className.split(' ')[0] : '');
+
+// ── 페이지가 실제로 무엇을 보는지 계측 ────────────────────────────────
+document.addEventListener('mousedown', (e) => saw('document mousedown → ' + desc(e.target)));
+document.addEventListener('pointerdown', (e) => saw('document pointerdown → ' + desc(e.target)));
+document.addEventListener('click', (e) => saw('document click → ' + desc(e.target)));
+
+// ── 3. dropdown (rc-trigger 방식: document mousedown 으로 닫기) ────────
+const dd = document.getElementById('dd');
+const ddTrigger = document.getElementById('dd-trigger');
+const place = (pop, trigger) => {
+  const r = trigger.getBoundingClientRect();
+  pop.style.top = r.bottom + scrollY + 6 + 'px';
+  pop.style.left = r.left + scrollX + 'px';
+};
+ddTrigger.addEventListener('click', () => { place(dd, ddTrigger); dd.classList.add('open'); log('info', 'dropdown opened'); });
+document.addEventListener('mousedown', (e) => {
+  if (dd.classList.contains('open') && !ddTrigger.contains(e.target)) {
+    dd.classList.remove('open');
+    log(picking() ? 'leak' : 'info', 'dropdown CLOSED by document mousedown');
+  }
+});
+dd.querySelectorAll('button').forEach((b) =>
+  b.addEventListener('click', () => log('leak', 'dropdown action fired: ' + b.dataset.action)));
+
+// ── 4. popover (Radix 방식: document pointerdown 으로 닫기) ────────────
+const pv = document.getElementById('pv');
+const pvTrigger = document.getElementById('pv-trigger');
+pvTrigger.addEventListener('click', () => { place(pv, pvTrigger); pv.classList.add('open'); log('info', 'popover opened'); });
+document.addEventListener('pointerdown', (e) => {
+  if (pv.classList.contains('open') && !pv.contains(e.target) && !pvTrigger.contains(e.target)) {
+    pv.classList.remove('open');
+    log(picking() ? 'leak' : 'info', 'popover CLOSED by document pointerdown');
+  }
+});
+
+// ── 5. hover tooltips ─────────────────────────────────────────────────
+const bindTip = (triggerId, tipId) => {
+  const trigger = document.getElementById(triggerId);
+  const tip = document.getElementById(tipId);
+  trigger.addEventListener('mouseenter', () => {
+    const r = trigger.getBoundingClientRect();
+    tip.style.top = r.top + scrollY - 34 + 'px';
+    tip.style.left = r.left + scrollX + 'px';
+    tip.classList.add('open');
+  });
+  trigger.addEventListener('mouseleave', () => {
+    setTimeout(() => { if (!tip.matches(':hover')) tip.classList.remove('open'); }, 180);
+  });
+  tip.addEventListener('mouseleave', () => tip.classList.remove('open'));
+};
+bindTip('tip-trigger', 'tip');
+bindTip('tip-ghost-trigger', 'tip-ghost');
+
+// ── 6. modal ──────────────────────────────────────────────────────────
+const backdrop = document.getElementById('backdrop');
+document.getElementById('modal-open').addEventListener('click', () => { backdrop.classList.add('open'); log('info', 'modal opened'); });
+document.getElementById('modal-close').addEventListener('click', () => backdrop.classList.remove('open'));
+backdrop.addEventListener('click', (e) => {
+  if (e.target === backdrop) { backdrop.classList.remove('open'); log(picking() ? 'leak' : 'info', 'modal CLOSED by backdrop click'); }
+});
+
+// ── 7. side effects ───────────────────────────────────────────────────
+document.getElementById('danger').addEventListener('click', () => log('leak', 'ACTION FIRED — this button was really clicked'));
+document.getElementById('aria-btn').addEventListener('click', () => log('leak', 'aria-disabled button was really clicked'));
+document.getElementById('link').addEventListener('click', (e) => { e.preventDefault(); log('leak', 'LINK followed'); });
+document.getElementById('form').addEventListener('submit', (e) => { e.preventDefault(); log('leak', 'FORM submitted'); });
+
+// ── 픽커 마운트 (로컬 빌드) ───────────────────────────────────────────
+const pickEl = document.getElementById('pick');
+
+/**
+ * onPick 을 넘기면 라이브러리 기본 동작인 클립보드 복사가 대체된다.
+ * playground 는 결과를 HUD 에 보여줘야 하므로 onPick 을 쓰고, 복사는 여기서 직접 한다.
+ * formatted 는 라이브러리의 formatResult() 결과 그대로라 복사되는 문자열은 기본 경로와 같다.
+ */
+const onPick = async (result, formatted) => {
+  pickEl.textContent = formatted;
+  log('pick', 'picked ' + result.tagName + (result.id ? '#' + result.id : '') + '  →  ' + result.cssSelector);
+  try {
+    await navigator.clipboard.writeText(formatted);
+    log('pick', 'copied to clipboard (' + formatted.length + ' chars)');
+  } catch (err) {
+    log('warn', 'clipboard write failed — ' + err.message);
+  }
+};
+
+try {
+  const [{ PathPickerButton }, React, { createRoot }] = await Promise.all([
+    import('../dist/index.js'),
+    import('react'),
+    import('react-dom/client'),
+  ]);
+  const host = document.createElement('div');
+  document.body.appendChild(host);
+  const root = createRoot(host);
+
+  const useDefault = document.getElementById('use-default');
+  const mount = () =>
+    root.render(React.createElement(PathPickerButton, {
+      pathname: '/playground',
+      project: 'react-path-picker',
+      onPick: useDefault.checked ? undefined : onPick,
+    }));
+
+  useDefault.addEventListener('change', () => {
+    mount();
+    pickEl.textContent = useDefault.checked
+      ? '— 기본 복사 경로. 픽한 뒤 아무 데나 붙여넣어 확인해라.'
+      : '— 아직 없음';
+    log('info', useDefault.checked ? 'remounted without onPick (library copies)' : 'remounted with onPick');
+  });
+
+  mount();
+  log('info', 'PathPickerButton mounted from ../dist/index.js');
+} catch (err) {
+  // React 를 못 받아오면(오프라인 등) core 만으로 최소 버튼을 띄운다.
+  // core 에는 formatResult 가 없으므로 usePathPicker 와 같은 형식을 여기서 만든다.
+  const format = (r) => {
+    const parts = ['[xPathInfo]'];
+    if (r.origin) parts.push('Origin: ' + r.origin);
+    if (r.project) parts.push('Project: ' + r.project);
+    parts.push('Route: ' + r.route, 'XPath: ' + r.xpath, 'CSS: ' + r.cssSelector);
+    if (r.reactComponent) parts.push('React: ' + r.reactComponent + (r.reactSource ? ' (' + r.reactSource + ')' : ''));
+    return parts.join(', ');
+  };
+  const { PathPickerInspector } = await import('../dist/core.js');
+  const btn = document.createElement('button');
+  btn.textContent = '◎';
+  btn.setAttribute('data-pathpicker-ignore', '');
+  btn.style.cssText = 'position:fixed;top:8px;right:16px;z-index:300;width:28px;height:28px;padding:0';
+  document.body.appendChild(btn);
+  let ins = null;
+  btn.onclick = () => {
+    if (ins) { ins.deactivate(); ins = null; return; }
+    ins = new PathPickerInspector({
+      getRoute: () => '/playground',
+      getProject: () => 'react-path-picker',
+      onPick: (r) => { ins = null; onPick(r, format(r)); },
+      onCancel: () => { ins = null; },
+    });
+    ins.activate();
+  };
+  log('info', 'React 로드 실패 — core 전용 폴백 버튼 (' + err.message + ')');
+  document.getElementById('build').textContent = 'core only';
+}
+</script>
+</body>
+</html>

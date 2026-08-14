@@ -52,6 +52,7 @@
   "scripts": {
     "build": "tsup",
     "dev": "tsup --watch",
+    "playground": "npm run build && node playground/serve.mjs",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
