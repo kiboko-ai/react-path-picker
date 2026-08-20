@@ -69,8 +69,11 @@ jobs:
 
       # publish 가 404 로 죽으면 npm 이 '권한 없음'을 숨긴 것이다(패키지 존재를 안 알리려고).
       # 토큰이 누구로 인증되는지 먼저 찍어야 원인이 갈린다 — 사용자명만 나오고 토큰은 안 나온다.
+      # granular token 은 whoami 에 필요한 스코프가 없어 401 이 날 수 있다. 정보용일 뿐이니
+      # 여기서 배포를 막지 않는다 — 진짜 판정은 아래 Publish 의 응답으로 한다.
       - name: Token identity
         if: steps.published.outputs.skip != 'true'
+        continue-on-error: true
         run: npm whoami
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
