@@ -60,7 +60,8 @@ Steps:
 
 For **Plain HTML**, add this `<script type="module">` to a dev-only HTML page (never ship to
 production). It loads `react-path-picker/core` from esm.sh, mounts a fixed top-right button, and
-copies `[xPathInfo] Route, XPath, CSS` to the clipboard on pick:
+copies `[xPathInfo] Route, XPath, CSS` to the clipboard on pick. `Shift`-tap arms it, Shift+click
+stacks several, `Enter` copies the stack:
 
 ```html
 <script type="module">
@@ -76,16 +77,15 @@ copies `[xPathInfo] Route, XPath, CSS` to the clipboard on pick:
   document.body.appendChild(btn);
   let ins = null;
   const reset = () => { ins = null; btn.style.background = '#0f172a'; };
+  const fmt = (r) =>
+    `[xPathInfo], Origin: ${r.origin}, Route: ${r.route}, XPath: ${r.xpath}, CSS: ${r.cssSelector}`;
   btn.onclick = () => {
     if (ins) { ins.deactivate(); reset(); return; }
     ins = new PathPickerInspector({
       getRoute: () => location.pathname,
-      onPick: (r) => {
-        navigator.clipboard?.writeText(
-          `[xPathInfo], Origin: ${r.origin}, Route: ${r.route}, XPath: ${r.xpath}, CSS: ${r.cssSelector}`
-        );
-        reset();
-      },
+      onPick: (r) => { navigator.clipboard?.writeText(fmt(r)); reset(); },
+      // Shift+click stacking needs this. Without it the picker stays one-pick-at-a-time.
+      onPickMany: (rs) => { navigator.clipboard?.writeText(rs.map(fmt).join('\n')); reset(); },
       onCancel: reset,
     });
     ins.activate();
@@ -171,6 +171,9 @@ const inspector = new PathPickerInspector({
   getRoute: () => window.location.pathname,
   getProject: () => 'acme-web', // optional — omit to auto-derive from React dev source info
   onPick: (result) => console.log(result),
+  // Shift+click stacking stays off until you supply this — a caller that only knows how to
+  // handle one result never gets handed an array it can't use. `Enter` confirms the stack.
+  onPickMany: (results) => console.log(results),
   onCancel: () => console.log('cancelled'),
 });
 

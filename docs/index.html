@@ -289,7 +289,7 @@
             <div class="w-8 h-8 rounded-lg bg-pp/20 flex items-center justify-center text-pp font-mono text-sm font-bold">3</div>
             <p class="text-white font-semibold text-sm">Click to copy</p>
           </div>
-          <p class="text-sm text-slate-400 mb-4">Origin, project root, route, XPath, CSS selector, and React component name &amp; source path land on your clipboard in one line.</p>
+          <p class="text-sm text-slate-400 mb-4">Origin, project root, route, XPath, CSS selector, and React component name &amp; source path land on your clipboard in one line. Need several? Shift+click each one and press <code class="text-pp text-xs">Enter</code>.</p>
           <div class="bg-pp-dark border border-pp/40 rounded-lg h-20 flex items-center justify-center text-xs text-pp-light font-mono">
             &check; Copied to clipboard
           </div>
@@ -347,6 +347,14 @@
           </div>
           <h3 class="text-white font-semibold mb-2">Tells you the file, not just the tag</h3>
           <p class="text-sm text-slate-400">Walks the React Fiber tree for the nearest user component <em>and</em> its source path — <code class="text-pp text-xs">BuyButton (components/BuyButton.tsx)</code>.</p>
+        </div>
+
+        <div class="feature-card bg-pp-surface border border-slate-700 rounded-xl p-6">
+          <div class="w-10 h-10 rounded-lg bg-pp/10 flex items-center justify-center mb-4">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#329D9C" stroke-width="2"><rect x="2" y="6" width="20" height="12" rx="2"/><line x1="6" y1="12" x2="6" y2="12"/><line x1="10" y1="12" x2="14" y2="12"/><line x1="18" y1="12" x2="18" y2="12"/></svg>
+          </div>
+          <h3 class="text-white font-semibold mb-2">A shortcut nothing else wants</h3>
+          <p class="text-sm text-slate-400">Tap <code class="text-pp text-xs">Shift</code> twice. Every <code class="text-pp text-xs">Ctrl</code>/<code class="text-pp text-xs">Alt</code>/<code class="text-pp text-xs">Shift</code> + letter combo already belongs to some browser; a modifier double-tap belongs to none.</p>
         </div>
 
         <div class="feature-card bg-pp-surface border border-slate-700 rounded-xl p-6">
@@ -484,16 +492,15 @@ and copies [xPathInfo] Route, XPath, CSS to the clipboard on pick:
   document.body.appendChild(btn);
   let ins = null;
   const reset = () =&gt; { ins = null; btn.style.background = '#0f172a'; };
+  const fmt = (r) =&gt;
+    `[xPathInfo], Origin: ${r.origin}, Route: ${r.route}, XPath: ${r.xpath}, CSS: ${r.cssSelector}`;
   btn.onclick = () =&gt; {
     if (ins) { ins.deactivate(); reset(); return; }
     ins = new PathPickerInspector({
       getRoute: () =&gt; location.pathname,
-      onPick: (r) =&gt; {
-        navigator.clipboard?.writeText(
-          `[xPathInfo], Origin: ${r.origin}, Route: ${r.route}, XPath: ${r.xpath}, CSS: ${r.cssSelector}`
-        );
-        reset();
-      },
+      onPick: (r) =&gt; { navigator.clipboard?.writeText(fmt(r)); reset(); },
+      // Shift+click stacking needs this. Without it the picker stays one-pick-at-a-time.
+      onPickMany: (rs) =&gt; { navigator.clipboard?.writeText(rs.map(fmt).join('\n')); reset(); },
       onCancel: reset,
     });
     ins.activate();
@@ -640,6 +647,8 @@ const inspector = new PathPickerInspector({
     // result: { origin, project, route, xpath, cssSelector, tagName, id,
     //          textContent, reactComponent, reactSource }
   },
+  // Shift+click stacking stays off until you supply this. Enter confirms the stack.
+  onPickMany: (results) =&gt; console.log('[xPathInfo]', results),
   onCancel: () =&gt; console.log('cancelled'),
 });
 
