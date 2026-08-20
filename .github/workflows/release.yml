@@ -69,19 +69,17 @@ jobs:
 
       # publish 가 404 로 죽으면 npm 이 '권한 없음'을 숨긴 것이다(패키지 존재를 안 알리려고).
       # 토큰이 누구로 인증되는지 먼저 찍어야 원인이 갈린다 — 사용자명만 나오고 토큰은 안 나온다.
-      # granular token 은 whoami 에 필요한 스코프가 없어 401 이 날 수 있다. 정보용일 뿐이니
-      # 여기서 배포를 막지 않는다 — 진짜 판정은 아래 Publish 의 응답으로 한다.
-      - name: Token identity
+      # Trusted Publishing(OIDC)은 npm 11.5.1+ 에서만 동작한다. Node 20 은 npm 10 을 싣고 온다.
+      # 설치·테스트·빌드는 위에서 Node 20 기본 npm 으로 이미 끝났으므로 여기서만 올린다.
+      - name: Upgrade npm for trusted publishing
         if: steps.published.outputs.skip != 'true'
-        continue-on-error: true
-        run: npm whoami
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          npm install -g npm@latest
+          npm --version
 
-      # prepublishOnly 가 typecheck·test·build 를 한 번 더 돌린다. 위 단계는 어디서
-      # 깨졌는지 로그로 바로 보이게 하려는 것.
+      # 토큰이 없다. npmjs.com 에 이 저장소·워크플로가 Trusted Publisher 로 등록돼 있어서,
+      # OIDC 로 받은 단기 신원으로 배포한다. prepublishOnly 가 typecheck·test·build 를
+      # 한 번 더 돌린다 — 위 단계는 어디서 깨졌는지 로그로 바로 보이게 하려는 것.
       - name: Publish
         if: steps.published.outputs.skip != 'true'
         run: npm publish --provenance --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
