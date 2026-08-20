@@ -13,9 +13,12 @@ npm 배포가 매번 다른 데서 막혀서, **막혔던 지점과 그때의 �
 git checkout main && git pull
 npm run typecheck && npm test && npm run build   # 미리 깨진 걸 잡는다
 npm version 0.3.0 -m "chore: release %s"          # package.json + 커밋 + v0.3.0 태그
-npm publish --access public
-git push origin main && git push origin v0.3.0
+git push origin main
+git push origin v0.3.0                            # ← 이 줄이 배포다. CI 가 npm 에 올린다
+gh run watch
 ```
+
+`npm publish` 를 손으로 치지 않는다 — [쓸 수 없다](#1-로컬-npm-publish-는-쓸-수-없다).
 
 ---
 
@@ -24,13 +27,17 @@ git push origin main && git push origin v0.3.0
 `npm publish` 가 `EOTP` 로 죽는 원인이 여러 개인데 에러 메시지는 전부 똑같이
 "one-time password 를 넣어라"라고만 나온다. 아래 순서대로 맞춰두면 다시 안 겪는다.
 
-### 1. 인증 앱(TOTP) 등록 — 로컬 배포를 하려면 필수
+### 1. 로컬 `npm publish` 는 쓸 수 없다
 
-npmjs.com → 우상단 아바타 → **Account** → **Two-Factor Authentication**
-→ **authenticator app** 을 2FA 수단으로 등록한다.
+npm 의 2FA 수단은 **보안키뿐이다** — Touch ID·Face ID·Windows Hello·YubiKey 등.
+authenticator app(TOTP)은 지원 목록에서 빠졌다
+(<https://docs.npmjs.com/about-two-factor-authentication>).
 
-보안키·패스키만 등록돼 있으면 **6자리 코드를 만들 방법이 없어서 로컬 배포가 불가능하다.**
-패키지 2FA 요구는 끌 수 없기 때문이다 (아래 2번). CI 로만 배포할 거면 이 단계는 건너뛴다.
+그런데 `npm publish` 는 `--otp=<6자리>` 만 받는다. **만들 수 있는 6자리가 없으므로 로컬 CLI
+배포는 불가능하다.** 패키지 2FA 요구도 끌 수 없다(아래 2번).
+
+같은 문서가 배포 조건을 이렇게 적는다 — 2FA 이거나, **`bypass 2FA` 가 켜진 granular access
+token**. 후자가 [CI 배포](#ci-로-배포하기)가 서 있는 자리다. **이 저장소의 배포 경로는 CI 하나다.**
 
 <details>
 <summary>같은 화면의 <code>Additional Options</code> 는 publish 와 무관하다</summary>
@@ -121,12 +128,12 @@ npm pack --dry-run
 # 4. 버전 + 커밋 + 태그를 한 번에
 npm version 0.3.0 -m "chore: release %s"
 
-# 5. 배포 — prepublishOnly 가 typecheck·test·build 를 다시 돌린다
-npm publish --access public
-
-# 6. 푸시 (main 을 먼저, 태그를 나중에)
+# 5. 푸시 (main 을 먼저, 태그를 나중에). 태그 푸시가 CI 배포를 트리거한다
 git push origin main
 git push origin v0.3.0
+
+# 6. 지켜본다
+gh run watch
 ```
 
 **문서를 고칠 게 있으면 4번 전에 끝내라.** `README.md` 는 tarball 에 같이 올라가므로,
@@ -165,16 +172,13 @@ node -e "console.log(Object.keys(require('react-path-picker')))"
 `--auth-type=web` 는 **login 에만** 적용된다. `npm publish --auth-type=web` 는 아무 효과가 없다 —
 publish 는 여전히 TOTP 6자리만 받는다.
 
-### 보안키·패스키만 쓰는데 6자리가 없다
+### 6자리를 만들 방법이 없다
 
-`npm publish --otp=` 에 넣을 코드를 만들 방법이 없고, 패키지 2FA 요구는 끌 수 없다
-(위 [사전 준비 2](#2-패키지-2fa-요구--끌-수-없다-2026-08-확인)). 둘 중 하나를 골라야 한다.
+npm 2FA 는 보안키만 지원하고 `npm publish` 는 6자리만 받는다. 맞물리는 지점이 없다.
+[CI 로 배포](#ci-로-배포하기)하는 것 말고는 방법이 없다.
 
-- npmjs.com → Account → Two-Factor Authentication → **authenticator app 추가**.
-  6자리가 생기니 `npm publish --access public --otp=<6자리>` 로 로컬 배포가 된다.
-- 또는 [CI 로 배포](#ci-로-배포하기). 태그만 밀면 되고 OTP 를 안 본다.
-
-계정 2FA 를 `auth-only` 로 낮추는 건 **해결책이 아니다.** 이 경로로 시간을 버리지 마라.
+계정 2FA 를 `auth-only` 로 낮추는 것도, 패키지 `mfa=none` 도 **해결책이 아니다.**
+이 두 경로로 시간을 버리지 마라.
 
 ### 버전을 이미 써버렸다
 
@@ -202,7 +206,14 @@ Trusted Publishing 으로 충족되므로, OTP 없이 배포되는 유일한 경
 
 ### 켜는 법
 
-npm 토큰을 GitHub 시크릿에 넣는다.
+**1) 토큰 발급** — npmjs.com → 우상단 아바타 → **Access Tokens** → **Generate New Token**
+→ **Granular Access Token**
+
+- Packages: `react-path-picker` 만, **Read and write**
+- **`Allow token to bypass 2FA` 를 켠다** ← 이게 없으면 CI 도 OTP 를 요구받는다
+- Expiration: 90일 이상 (짧으면 조용히 만료돼 다음 배포에서 또 막힌다)
+
+**2) 시크릿 등록**
 
 ```bash
 gh secret set NPM_TOKEN --repo kiboko-ai/react-path-picker
