@@ -88,7 +88,7 @@ export interface UsePathPickerOptions {
    */
   hotkey?: string | string[] | false;
   /**
-   * Shift+click accumulation and drag-region select. `true` by default.
+   * Shift+click accumulation. `true` by default.
    * Set `false` for the original one-pick-then-close behavior.
    */
   multi?: boolean;

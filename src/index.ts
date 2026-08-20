@@ -3,15 +3,6 @@ export { PathPickerInspector } from './core/inspector';
 export { getXPath } from './core/xpath';
 export { getCssSelector } from './core/css-selector';
 export { getReactComponent } from './core/react-fiber';
-export {
-  MAX_REGION_SELECTION,
-  MAX_SNAPSHOT,
-  bandArea,
-  normalizeBand,
-  selectInBand,
-  snapshotElements,
-} from './core/region-select';
-export type { Band, RectLike, RectSnapshot, RegionSelection } from './core/region-select';
 export type { PathPickerResult, InspectorCallbacks } from './core/types';
 
 // React layer

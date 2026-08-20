@@ -2,36 +2,19 @@ import type { InspectorCallbacks, PathPickerResult } from './types';
 import { getXPath } from './xpath';
 import { getCssSelector } from './css-selector';
 import { getReactComponent } from './react-fiber';
-import {
-  MAX_SNAPSHOT,
-  bandArea,
-  normalizeBand,
-  selectInBand,
-  snapshotElements,
-  type Band,
-  type RectLike,
-  type RectSnapshot,
-} from './region-select';
 
 const OVERLAY_Z = 99999;
 const HIGHLIGHT_BG = 'rgba(50,157,156,0.15)';
 const HIGHLIGHT_BORDER = '#329D9C';
 const SELECTED_BG = 'rgba(50,157,156,0.24)';
-const PREVIEW_BORDER = 'rgba(50,157,156,0.7)';
 
 /**
- * picking 중에만 주입.
- *
- * 1) 브라우저는 disabled 폼 컨트롤 위에서 마우스 이벤트를 아예 발생시키지 않는다 — 조상으로
- *    버블도 안 되므로 그대로 두면 커서가 그 위에 있다는 사실조차 알 수 없다. pointer-events 를
- *    꺼 히트테스트에서 빼면 이벤트가 조상으로 흘러 좌표를 얻을 수 있고, 진짜 대상은
- *    _resolveTarget 이 rect 로 다시 찾아낸다.
- * 2) 영역 드래그가 지나간 자리에 텍스트가 블록으로 잡히면 눈에 거슬리고, 브라우저 기본
- *    드래그(이미지·링크)까지 끼어든다. picking 동안만 선택을 끈다.
+ * picking 중에만 주입. 브라우저는 disabled 폼 컨트롤 위에서 마우스 이벤트를 아예 발생시키지
+ * 않는다 — 조상으로 버블도 안 되므로 그대로 두면 커서가 그 위에 있다는 사실조차 알 수 없다.
+ * pointer-events 를 꺼 히트테스트에서 빼면 이벤트가 조상으로 흘러 좌표를 얻을 수 있고,
+ * 진짜 대상은 _resolveTarget 이 rect 로 다시 찾아낸다.
  */
-const PICKING_CSS =
-  ':disabled,[disabled],[aria-disabled="true"]{pointer-events:none!important}' +
-  'body *{user-select:none!important;-webkit-user-select:none!important}';
+const PICKING_CSS = ':disabled,[disabled],[aria-disabled="true"]{pointer-events:none!important}';
 
 /**
  * 페이지가 보기 전에 삼켜야 하는 press 계열. popover·dropdown 의 outside-click 닫기는
@@ -49,33 +32,34 @@ const PRESS_EVENTS = [
   'contextmenu',
 ] as const;
 
+/**
+ * 눌림은 이 한 종류만 픽으로 친다. pointerdown 에 preventDefault 를 걸면 뒤따르는 mousedown
+ * 이 사라지지만, 그러지 않는 환경에서 둘 다 도착하면 Shift+클릭이 두 번 토글돼 없던 일이 된다.
+ */
+const DOWN_TYPE = typeof PointerEvent === 'undefined' ? 'mousedown' : 'pointerdown';
+
 /** DOM 이 병적으로 깊을 때를 대비한 하강 상한. */
 const MAX_DESCEND = 32;
-
-/** 이만큼 움직이기 전까지는 드래그가 아니라 그냥 클릭이다. */
-const DRAG_THRESHOLD = 5;
-
-/** 손이 떨려 생긴 몇 픽셀짜리 밴드로 선택을 날려버리지 않도록. */
-const MIN_BAND_AREA = 25;
-
-const HAS_POINTER = typeof PointerEvent !== 'undefined';
-const DOWN_TYPE = HAS_POINTER ? 'pointerdown' : 'mousedown';
-const UP_TYPE = HAS_POINTER ? 'pointerup' : 'mouseup';
 
 function truncate(text: string, max: number): string {
   const clean = text.replace(/\s+/g, ' ').trim();
   return clean.length > max ? clean.slice(0, max) + '…' : clean;
 }
 
+interface RectLike {
+  top: number;
+  left: number;
+  width: number;
+  height: number;
+}
+
 interface PoolItem {
   rect: RectLike;
   label?: string;
-  hidden?: boolean;
 }
 
 /**
- * 같은 모양의 사각형 여러 개를 그리는 최소한의 풀. 선택 표시는 최대 30개, 드래그 프리뷰는
- * 프레임마다 갱신되므로 매번 만들고 지우는 대신 노드를 재사용한다.
+ * 선택 표시용 사각형 풀. 선택이 바뀔 때마다 노드를 만들고 지우는 대신 재사용한다.
  */
 class RectPool {
   private nodes: HTMLDivElement[] = [];
@@ -95,7 +79,7 @@ class RectPool {
     for (let i = 0; i < this.nodes.length; i++) {
       const node = this.nodes[i];
       const item = items[i];
-      if (!item || item.hidden || (item.rect.width <= 0 && item.rect.height <= 0)) {
+      if (!item || (item.rect.width <= 0 && item.rect.height <= 0)) {
         node.style.display = 'none';
         continue;
       }
@@ -108,20 +92,6 @@ class RectPool {
       if (badge) badge.textContent = item.label ?? '';
     }
   }
-
-  clear(): void {
-    this.render([]);
-  }
-}
-
-interface PressState {
-  /** 페이지 좌표로 기억한다 — 드래그 도중 스크롤이 나도 앵커가 밀리지 않게. */
-  pageX: number;
-  pageY: number;
-  clientX: number;
-  clientY: number;
-  target: Element | null;
-  shift: boolean;
 }
 
 export class PathPickerInspector {
@@ -129,10 +99,8 @@ export class PathPickerInspector {
   private container: HTMLDivElement | null = null;
   private overlay: HTMLDivElement | null = null;
   private tooltip: HTMLDivElement | null = null;
-  private bandEl: HTMLDivElement | null = null;
   private hud: HTMLDivElement | null = null;
   private markers: RectPool | null = null;
-  private previews: RectPool | null = null;
   private style: HTMLStyleElement | null = null;
   private active = false;
 
@@ -142,26 +110,10 @@ export class PathPickerInspector {
   private handleScroll: () => void;
   private handleWindowResize: () => void;
   private handleTransitionEnd: () => void;
-  private handleAbort: () => void;
   private lastTarget: Element | null = null;
   private resizeObserver: ResizeObserver | null = null;
 
   private selection: Element[] = [];
-  private press: PressState | null = null;
-  private dragging = false;
-  private pointer = { x: 0, y: 0 };
-  private snapshot: RectSnapshot[] = [];
-  /** 스냅샷의 rect 를 element 로 바로 찾기 위한 색인. 프리뷰가 매 프레임 다시 재지 않게. */
-  private snapshotRects = new Map<Element, RectLike>();
-  private snapshotStale = false;
-  private previewCount = 0;
-  private regionDropped = 0;
-  private rafId = 0;
-  /**
-   * 예약 여부는 id 와 따로 둔다. rAF 가 콜백을 동기적으로 부르는 환경(테스트 stub 등)에서는
-   * 콜백이 먼저 끝난 뒤에 id 가 대입되므로, id 하나로 판단하면 예약이 영영 안 풀린다.
-   */
-  private rafQueued = false;
 
   constructor(callbacks: InspectorCallbacks) {
     this.callbacks = callbacks;
@@ -172,10 +124,9 @@ export class PathPickerInspector {
     this.handleScroll = this._onScroll.bind(this);
     this.handleWindowResize = this._refreshAll.bind(this);
     this.handleTransitionEnd = this._refreshAll.bind(this);
-    this.handleAbort = this._cancelPress.bind(this);
   }
 
-  /** Shift+클릭 누적과 드래그 영역이 실제로 동작하는지. */
+  /** Shift+클릭 누적이 실제로 동작하는지. */
   private get multi(): boolean {
     return this.callbacks.multi !== false && typeof this.callbacks.onPickMany === 'function';
   }
@@ -215,31 +166,6 @@ export class PathPickerInspector {
       display: 'none',
     });
     this.container.appendChild(this.overlay);
-
-    this.bandEl = document.createElement('div');
-    Object.assign(this.bandEl.style, {
-      position: 'fixed',
-      pointerEvents: 'none',
-      boxSizing: 'border-box',
-      background: 'rgba(50,157,156,0.10)',
-      border: `1px dashed ${HIGHLIGHT_BORDER}`,
-      borderRadius: '2px',
-      display: 'none',
-    });
-    this.container.appendChild(this.bandEl);
-
-    this.previews = new RectPool(this.container, () => {
-      const node = document.createElement('div');
-      Object.assign(node.style, {
-        position: 'fixed',
-        pointerEvents: 'none',
-        boxSizing: 'border-box',
-        border: `1px solid ${PREVIEW_BORDER}`,
-        borderRadius: '3px',
-        display: 'none',
-      });
-      return node;
-    });
 
     this.markers = new RectPool(this.container, () => {
       const node = document.createElement('div');
@@ -324,9 +250,6 @@ export class PathPickerInspector {
     // capture phase 로 모든 element 의 transition 종료를 잡는다.
     window.addEventListener('transitionend', this.handleTransitionEnd, true);
     window.addEventListener('animationend', this.handleTransitionEnd, true);
-    // 창을 벗어나거나 포인터를 뺏기면 드래그가 유령처럼 남는다.
-    window.addEventListener('pointercancel', this.handleAbort, true);
-    window.addEventListener('blur', this.handleAbort);
 
     // 추적 중인 element 의 크기·위치 변화를 능동 감지 — Antd Collapse 의 height transition,
     // 부모 layout 변화로 인한 viewport 좌표 변화 등이 mousemove/scroll 없이 발생하는 케이스 대응.
@@ -340,15 +263,6 @@ export class PathPickerInspector {
     this.active = false;
     this.lastTarget = null;
     this.selection = [];
-    this.press = null;
-    this.dragging = false;
-    this.snapshot = [];
-    this.snapshotRects.clear();
-    this.snapshotStale = false;
-    this.previewCount = 0;
-    this.regionDropped = 0;
-
-    this._cancelDragFrame();
 
     document.body.style.cursor = '';
     window.removeEventListener('mousemove', this.handleMouseMove, true);
@@ -360,8 +274,6 @@ export class PathPickerInspector {
     window.removeEventListener('resize', this.handleWindowResize);
     window.removeEventListener('transitionend', this.handleTransitionEnd, true);
     window.removeEventListener('animationend', this.handleTransitionEnd, true);
-    window.removeEventListener('pointercancel', this.handleAbort, true);
-    window.removeEventListener('blur', this.handleAbort);
 
     if (this.resizeObserver) {
       this.resizeObserver.disconnect();
@@ -374,10 +286,8 @@ export class PathPickerInspector {
     this.container = null;
     this.overlay = null;
     this.tooltip = null;
-    this.bandEl = null;
     this.hud = null;
     this.markers = null;
-    this.previews = null;
   }
 
   isActive(): boolean {
@@ -453,21 +363,6 @@ export class PathPickerInspector {
   }
 
   private _onMouseMove(e: MouseEvent): void {
-    this.pointer.x = e.clientX;
-    this.pointer.y = e.clientY;
-
-    if (this.press) {
-      if (!this.dragging) {
-        const dx = Math.abs(e.clientX - this.press.clientX);
-        const dy = Math.abs(e.clientY - this.press.clientY);
-        // 누르고 있는 동안 하이라이트는 얼려 둔다 — 보이는 것이 곧 찍히는 것.
-        if (!this.multi || Math.max(dx, dy) < DRAG_THRESHOLD) return;
-        this._startDrag();
-      }
-      this._scheduleDragFrame();
-      return;
-    }
-
     const target = this._resolveTarget(e.clientX, e.clientY);
     if (!target || this._shouldIgnore(target)) {
       this.overlay!.style.display = 'none';
@@ -512,11 +407,7 @@ export class PathPickerInspector {
   private _refreshAll(): void {
     if (!this.active) return;
 
-    if (this.dragging) {
-      // 스크롤로 문서가 움직였으면 스냅샷의 rect 도 낡았다. 다시 재는 건 다음 프레임에서.
-      this.snapshotStale = true;
-      this._scheduleDragFrame();
-    } else if (this.lastTarget) {
+    if (this.lastTarget) {
       const rect = this.lastTarget.getBoundingClientRect();
       if (rect.width === 0 && rect.height === 0) {
         if (this.overlay) this.overlay.style.display = 'none';
@@ -587,60 +478,26 @@ export class PathPickerInspector {
   }
 
   /**
-   * 페이지에는 press 계열을 통째로 안 넘긴다 — 그래야 popover 가 안 닫히고 disabled 컨트롤도
-   * 찍힌다. 확정은 누를 때가 아니라 뗄 때 한다: 그 사이 움직임을 봐야 드래그인지 클릭인지
-   * 갈리기 때문이다. 어차피 눌림 자체가 페이지에 닿지 않으므로, 미뤄도 대상이 사라지지 않는다.
+   * 누르는 순간에 확정한다. click 까지 기다리면 그 사이 popover 가 닫혀 커서 밑에는 이미
+   * 다른 element 가 와 있다. 대상도 그 자리에서 다시 재지 않고 하이라이트 중인 lastTarget 을
+   * 그대로 쓴다 — 보이는 것이 곧 찍히는 것.
    */
   private _onPress(e: Event): void {
     const me = e as MouseEvent;
+    const target = this._pickTargetAt(me.clientX, me.clientY);
 
-    // 누름이 이미 우리 것이면 어디서 떼든 우리가 끝낸다 — 버튼 위에서 손을 떼도 드래그가 안 남는다.
-    if (!this.press) {
-      // 픽커 자신의 UI 는 통과 — 버튼으로 picking 을 끌 수 있어야 한다.
-      if (this._shouldIgnore(this._pickTargetAt(me.clientX, me.clientY))) return;
-    }
+    // 픽커 자신의 UI 는 통과 — 버튼으로 picking 을 끌 수 있어야 한다.
+    if (this._shouldIgnore(target)) return;
 
     e.preventDefault();
     e.stopPropagation();
     e.stopImmediatePropagation();
 
-    if (e.type === DOWN_TYPE && me.button === 0 && !this.press) {
-      this._beginPress(me);
-    } else if (e.type === UP_TYPE && me.button === 0 && this.press) {
-      this._endPress(me);
-    }
-  }
-
-  private _beginPress(me: MouseEvent): void {
-    this.pointer.x = me.clientX;
-    this.pointer.y = me.clientY;
-    this.press = {
-      pageX: me.clientX + window.scrollX,
-      pageY: me.clientY + window.scrollY,
-      clientX: me.clientX,
-      clientY: me.clientY,
-      target: this._pickTargetAt(me.clientX, me.clientY),
-      shift: me.shiftKey,
-    };
-  }
-
-  private _endPress(me: MouseEvent): void {
-    const press = this.press;
-    this.press = null;
-    if (!press) return;
-
-    const additive = press.shift || me.shiftKey;
-
-    if (this.dragging) {
-      this._commitDrag(press, additive);
-      return;
-    }
-
-    const target = press.target;
-    if (!target) return;
+    // 픽은 왼쪽 버튼 누름에서만. 나머지(우클릭·mouseup·click)는 삼키기만 한다.
+    if (e.type !== DOWN_TYPE || me.button !== 0 || !target) return;
 
     if (this.multi) {
-      if (additive) {
+      if (me.shiftKey) {
         this._toggleSelection(target);
         return;
       }
@@ -691,137 +548,17 @@ export class PathPickerInspector {
     timer = setTimeout(cleanup, 700);
   }
 
-  // ── 드래그 영역 ────────────────────────────────────────────────────────
-
-  private _startDrag(): void {
-    this.dragging = true;
-    if (this.overlay) this.overlay.style.display = 'none';
-    if (this.tooltip) this.tooltip.style.display = 'none';
-    if (this.bandEl) this.bandEl.style.display = 'block';
-    this._takeSnapshot();
-  }
-
-  /** rect 를 재는 유일한 자리. 드래그 시작과, 스크롤로 문서가 밀렸을 때만 부른다. */
-  private _takeSnapshot(): void {
-    this.snapshot = snapshotElements(document.body);
-    this.snapshotRects = new Map(this.snapshot.map((item) => [item.el, item.rect]));
-    this.snapshotStale = false;
-  }
-
-  private _scheduleDragFrame(): void {
-    if (typeof requestAnimationFrame === 'undefined') {
-      this._drawDrag();
-      return;
-    }
-    if (this.rafQueued) return;
-    this.rafQueued = true;
-    this.rafId = requestAnimationFrame(() => {
-      this.rafQueued = false;
-      this._drawDrag();
-    });
-  }
-
-  private _cancelDragFrame(): void {
-    if (this.rafId && typeof cancelAnimationFrame !== 'undefined') {
-      cancelAnimationFrame(this.rafId);
-    }
-    this.rafId = 0;
-    this.rafQueued = false;
-  }
-
-  private _currentBand(press: PressState): Band {
-    return normalizeBand(
-      press.pageX - window.scrollX,
-      press.pageY - window.scrollY,
-      this.pointer.x,
-      this.pointer.y,
-    );
-  }
-
-  private _drawDrag(): void {
-    if (!this.active || !this.dragging || !this.press) return;
-    // 스크롤은 연달아 들어온다. 프레임당 한 번으로 눌러 담는다.
-    if (this.snapshotStale) this._takeSnapshot();
-    const band = this._currentBand(this.press);
-
-    if (this.bandEl) {
-      Object.assign(this.bandEl.style, {
-        display: 'block',
-        top: `${band.top}px`,
-        left: `${band.left}px`,
-        width: `${band.right - band.left}px`,
-        height: `${band.bottom - band.top}px`,
-      });
-    }
-
-    const { elements, dropped } = selectInBand(this.snapshot, band);
-    this.previewCount = elements.length;
-    this.regionDropped = dropped;
-    this.previews?.render(
-      elements.map((el) => ({ rect: this.snapshotRects.get(el) ?? el.getBoundingClientRect() })),
-    );
-    this._renderHud();
-  }
-
-  private _commitDrag(press: PressState, additive: boolean): void {
-    if (this.snapshotStale) this._takeSnapshot();
-    const band = this._currentBand(press);
-    // 몇 픽셀짜리 밴드는 손떨림으로 본다 — 선택을 건드리지 않는다.
-    const tooSmall = bandArea(band) < MIN_BAND_AREA;
-    // 스냅샷을 읽고 나서 정리한다 — _endDragVisuals 가 스냅샷을 비운다.
-    const picked = tooSmall ? null : selectInBand(this.snapshot, band);
-
-    this._endDragVisuals();
-
-    if (!picked) {
-      this._renderHud();
-      return;
-    }
-
-    this.regionDropped = picked.dropped;
-    if (additive) this._addSelection(picked.elements);
-    else this._setSelection(picked.elements);
-  }
-
-  private _endDragVisuals(): void {
-    this.dragging = false;
-    this.previewCount = 0;
-    this.snapshot = [];
-    this.snapshotRects.clear();
-    this.snapshotStale = false;
-    this._cancelDragFrame();
-    if (this.bandEl) this.bandEl.style.display = 'none';
-    this.previews?.clear();
-  }
-
-  private _cancelPress(): void {
-    if (!this.active) return;
-    this.press = null;
-    if (this.dragging) {
-      this._endDragVisuals();
-      this._renderHud();
-    }
-  }
-
   // ── 선택 집합 ──────────────────────────────────────────────────────────
 
   private _toggleSelection(el: Element): void {
     const index = this.selection.indexOf(el);
     if (index >= 0) this.selection.splice(index, 1);
     else this.selection.push(el);
-    this.regionDropped = 0;
     this._afterSelectionChange();
   }
 
   private _setSelection(els: Element[]): void {
     this.selection = els.slice();
-    this._afterSelectionChange();
-  }
-
-  private _addSelection(els: Element[]): void {
-    for (const el of els) {
-      if (!this.selection.includes(el)) this.selection.push(el);
-    }
     this._afterSelectionChange();
   }
 
@@ -849,21 +586,10 @@ export class PathPickerInspector {
   }
 
   private _hudText(): string {
-    if (this.dragging) {
-      const capped =
-        this.snapshot.length >= MAX_SNAPSHOT ? ` · first ${MAX_SNAPSHOT} elements only` : '';
-      if (this.previewCount === 0) return `Drag over what you want${capped}`;
-      const dropped = this.regionDropped > 0 ? ` (+${this.regionDropped} over the cap)` : '';
-      return `${this.previewCount} in region${dropped} · release to select${capped}`;
-    }
-
     const n = this.selection.length;
-    if (n > 0) {
-      const dropped = this.regionDropped > 0 ? ` (${this.regionDropped} skipped)` : '';
-      return `${n} selected${dropped} · Enter to copy · Esc to cancel`;
-    }
+    if (n > 0) return `${n} selected · Enter to copy · Esc to cancel`;
     return this.multi
-      ? 'Click to pick · Shift+click or drag to select many · Esc to cancel'
+      ? 'Click to pick · Shift+click to select many · Esc to cancel'
       : 'Click to pick · Esc to cancel';
   }
 
@@ -880,11 +606,6 @@ export class PathPickerInspector {
     if (e.key === 'Escape') {
       e.preventDefault();
       e.stopPropagation();
-      // 드래그 중이면 드래그만 무른다. 픽커까지 닫아버리면 다시 켜야 해서 성가시다.
-      if (this.press || this.dragging) {
-        this._cancelPress();
-        return;
-      }
       this.deactivate();
       this.callbacks.onCancel();
       return;

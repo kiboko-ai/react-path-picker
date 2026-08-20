@@ -18,7 +18,7 @@ Three clicks. From mystery DOM node to a clipboard-ready snippet your agent can 
 2. **Hover any element.** A teal overlay highlights it with a tooltip showing its tag, classes, and detected component.
 3. **Click to copy.** Origin, project root, route, XPath, CSS selector, and React component name + source path land on your clipboard.
 
-Need several at once? **Shift+click** each one, or **drag a box** around them, then press `Enter`.
+Need several at once? **Shift+click** each one, then press `Enter`.
 
 ## Features
 
@@ -27,7 +27,7 @@ Need several at once? **Shift+click** each one, or **drag a box** around them, t
 - **React component detection** — walks the React Fiber tree at runtime to find the nearest user component name and (with a small dev-only loader) its source file.
 - **Knows which app it came from** — every pick carries the page `Origin` and the `Project` root, so an agent juggling several repos never patches the wrong one. The root is derived from React's dev source info; override it with the `project` prop when you want a name instead of a path.
 - **Picks what a normal click can't** — disabled buttons and inputs, and elements inside popovers, dropdowns, and menus that would close the moment you press. While picking, the page never sees the press: nothing closes, nothing submits, nothing navigates.
-- **Several elements in one go** — Shift+click to stack picks, or drag a box to grab everything inside it. `Enter` copies them all under one shared header, so three elements cost barely more than one.
+- **Several elements in one go** — Shift+click to stack picks. `Enter` copies them all under one shared header, so three elements cost barely more than one.
 - **A shortcut nothing else wants** — tapping `Shift` twice arms the picker. Every `Ctrl`/`Alt`/`Shift` + letter combo is already spoken for by some browser; a modifier double-tap is bound by none. Change it with the `hotkey` prop, or pass `false` to turn it off.
 - **Framework-agnostic core** — `react-path-picker/core` exposes `PathPickerInspector`, `getXPath()`, `getCssSelector()`, and `getReactComponent()`. No React required — works in plain HTML too via esm.sh.
 
@@ -189,7 +189,7 @@ inspector.activate();
 | `onPick` | `(result, formatted) => void` | clipboard copy | Custom handler invoked after a single-element pick |
 | `onPickMany` | `(results, formatted) => void` | clipboard copy | Custom handler for a multi-element selection. Passing only `onPick` does not cover this path |
 | `hotkey` | `string \| string[] \| false` | `"shift shift"` | Shortcut that arms picking. Combos toggle (`"alt+p"`), double-taps only arm (`"shift shift"`). `false` disables it |
-| `multi` | `boolean` | `true` | Shift+click stacking and drag-region select. `false` restores one-pick-then-close |
+| `multi` | `boolean` | `true` | Shift+click stacking. `false` restores one-pick-then-close |
 
 ### Picking several at once
 
@@ -199,15 +199,12 @@ While the picker is armed:
 |---|---|
 | **click** | pick one, copy, close — unchanged |
 | **Shift+click** | add it to the selection and stay open. Shift+click it again to drop it |
-| **drag** | select every element the box fully covers, replacing the selection |
-| **Shift+drag** | same, but added to what you already have |
 | **Enter** | copy the whole selection and close |
-| **Esc** | mid-drag, undo the drag; otherwise throw the selection away and close |
+| **Esc** | throw the selection away and close |
 
-A box takes **the outermost element that fits inside it**. Drag around two cards and you get the two
-cards, not the eighteen wrappers, headings, and spans they contain. Nudge the box wider until it
-clears their shared wrapper and you get the wrapper instead. Once a selection exists, a plain click
-replaces it rather than picking-and-closing — a stray click should not cost you the work.
+Each pick gets a numbered badge, and the tooltip tells you which slot an element already holds. Once
+a selection exists, a plain click replaces it rather than picking-and-closing — a stray click should
+not cost you the work. Anything the page removes before you press `Enter` drops out quietly.
 
 The copied text hoists what every pick shares:
 
@@ -250,7 +247,7 @@ Still out of reach: a tooltip rendered in a portal with `pointer-events: none`. 
 
 ### Exports
 
-- Root (`react-path-picker`): `PathPickerButton`, `usePathPicker`, `formatResult`, `formatResults`, `createHotkeyMatcher`, `describeHotkey`, `PathPickerInspector`, `getXPath`, `getCssSelector`, `getReactComponent`, `selectInBand`, `snapshotElements`
+- Root (`react-path-picker`): `PathPickerButton`, `usePathPicker`, `formatResult`, `formatResults`, `createHotkeyMatcher`, `describeHotkey`, `PathPickerInspector`, `getXPath`, `getCssSelector`, `getReactComponent`
 - Subpath (`react-path-picker/core`): same core utilities, no React dependency.
 
 ## Development
@@ -272,7 +269,7 @@ npm run playground     # builds dist/, serves http://localhost:5174
 A local page wired to your `dist/` build — not the published package — so you can click through the
 cases that are hard to unit-test: native and library-styled disabled controls, dropdowns that close on
 `mousedown`, Radix-style popovers that close on `pointerdown`, hover tooltips, a modal backdrop,
-Shift+click stacking, and drag-region select over deliberately nested wrappers.
+and Shift+click stacking.
 A panel on the right logs every event the page actually received, so anything leaking through the
 picker shows up in red. Needs network the first time — React loads from esm.sh.
 

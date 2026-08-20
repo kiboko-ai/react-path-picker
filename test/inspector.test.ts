@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { PathPickerInspector } from '../src/core/inspector';
 import type { PathPickerResult } from '../src/core/types';
 
@@ -51,23 +51,17 @@ function elementFromPointStub(x: number, y: number): Element | null {
 const mouse = (type: string, x: number, y: number, init: MouseEventInit = {}) =>
   new MouseEvent(type, { bubbles: true, cancelable: true, clientX: x, clientY: y, button: 0, ...init });
 
-function down(x: number, y: number, init: MouseEventInit = {}) {
+function send(type: string, x: number, y: number, init: MouseEventInit = {}) {
   const target = elementFromPointStub(x, y) ?? document.body;
-  target.dispatchEvent(mouse('mousedown', x, y, init));
+  target.dispatchEvent(mouse(type, x, y, init));
 }
 
-function up(x: number, y: number, init: MouseEventInit = {}) {
-  const target = elementFromPointStub(x, y) ?? document.body;
-  target.dispatchEvent(mouse('mouseup', x, y, init));
-}
+const down = (x: number, y: number, init: MouseEventInit = {}) => send('mousedown', x, y, init);
+const up = (x: number, y: number, init: MouseEventInit = {}) => send('mouseup', x, y, init);
+const click = (x: number, y: number, init: MouseEventInit = {}) => send('click', x, y, init);
 
 function move(x: number, y: number) {
   document.dispatchEvent(mouse('mousemove', x, y));
-}
-
-function click(x: number, y: number) {
-  const target = elementFromPointStub(x, y) ?? document.body;
-  target.dispatchEvent(mouse('click', x, y));
 }
 
 function keyDown(key: string) {
@@ -83,7 +77,7 @@ function pick(x: number, y: number, init: MouseEventInit = {}) {
   move(x, y);
   down(x, y, init);
   up(x, y, init);
-  click(x, y);
+  click(x, y, init);
 }
 
 interface Harness {
@@ -157,15 +151,12 @@ const IN_A: [number, number] = [80, 40];
 const IN_B: [number, number] = [220, 40];
 const IN_FAR: [number, number] = [60, 320];
 
+const ids = (els: Element[]) => els.map((el) => el.id);
+
 beforeEach(() => {
   rects.clear();
   document.body.innerHTML = '';
   document.elementFromPoint = elementFromPointStub as typeof document.elementFromPoint;
-  vi.stubGlobal('requestAnimationFrame', (cb: FrameRequestCallback) => {
-    cb(0);
-    return 1;
-  });
-  vi.stubGlobal('cancelAnimationFrame', () => {});
   buildPage();
 });
 
@@ -175,13 +166,12 @@ afterEach(() => {
   mounted = null;
   // 픽 뒤 삼킴은 click 또는 700ms 로 걷힌다. 이것도 남겨두면 다음 테스트를 먹는다.
   window.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-  vi.unstubAllGlobals();
   document.body.innerHTML = '';
   document.body.style.cursor = '';
 });
 
 describe('single pick', () => {
-  it('confirms on release and closes, exactly like before', () => {
+  it('confirms on the press and closes', () => {
     const h = mount();
     pick(...IN_A);
 
@@ -194,20 +184,20 @@ describe('single pick', () => {
 
   it('never lets the press reach the page', () => {
     const h = mount();
-    // 확정 뒤 따라오는 click 까지 삼켜야 방금 찍은 버튼이 진짜로 눌리지 않는다.
+    // 확정 뒤 따라오는 mouseup·click 까지 삼켜야 방금 찍은 버튼이 진짜로 눌리지 않는다.
     pick(...IN_A);
 
     expect(h.pageSaw).toEqual([]);
   });
 
-  it('picks what was highlighted, not what the cursor drifted onto', () => {
+  it('picks what was highlighted — the release cannot move it', () => {
     const h = mount();
     move(...IN_A);
     down(...IN_A);
     up(...IN_B);
     click(...IN_B);
 
-    expect(h.picked[0].id).toBe('a');
+    expect(h.picked.map((r) => r.id)).toEqual(['a']);
   });
 
   it('stays put when the press starts on the picker own UI', () => {
@@ -220,6 +210,16 @@ describe('single pick', () => {
     expect(h.picked).toHaveLength(0);
     expect(h.inspector.isActive()).toBe(true);
   });
+
+  it('swallows a right-click instead of picking with it', () => {
+    const h = mount();
+    move(...IN_A);
+    send('contextmenu', ...IN_A, { button: 2 });
+
+    expect(h.picked).toHaveLength(0);
+    expect(h.pageSaw).toEqual([]);
+    expect(h.inspector.isActive()).toBe(true);
+  });
 });
 
 describe('shift+click accumulation', () => {
@@ -230,7 +230,7 @@ describe('shift+click accumulation', () => {
 
     expect(h.picked).toHaveLength(0);
     expect(h.inspector.isActive()).toBe(true);
-    expect(h.inspector.getSelection().map((el) => el.id)).toEqual(['a', 'b']);
+    expect(ids(h.inspector.getSelection())).toEqual(['a', 'b']);
 
     keyDown('Enter');
 
@@ -245,7 +245,16 @@ describe('shift+click accumulation', () => {
     pick(...IN_B, { shiftKey: true });
     pick(...IN_A, { shiftKey: true });
 
-    expect(h.inspector.getSelection().map((el) => el.id)).toEqual(['b']);
+    expect(ids(h.inspector.getSelection())).toEqual(['b']);
+  });
+
+  it('toggles once even when pointerdown and mousedown both arrive', () => {
+    const h = mount();
+    move(...IN_A);
+    send('pointerdown', ...IN_A, { shiftKey: true });
+    send('mousedown', ...IN_A, { shiftKey: true });
+
+    expect(ids(h.inspector.getSelection())).toEqual(['a']);
   });
 
   it('replaces the selection on a plain click instead of throwing it away', () => {
@@ -256,7 +265,15 @@ describe('shift+click accumulation', () => {
 
     expect(h.picked).toHaveLength(0);
     expect(h.inspector.isActive()).toBe(true);
-    expect(h.inspector.getSelection().map((el) => el.id)).toEqual(['far']);
+    expect(ids(h.inspector.getSelection())).toEqual(['far']);
+  });
+
+  it('keeps the page blind while stacking', () => {
+    const h = mount();
+    pick(...IN_A, { shiftKey: true });
+    pick(...IN_B, { shiftKey: true });
+
+    expect(h.pageSaw).toEqual([]);
   });
 
   it('ignores Enter with nothing selected', () => {
@@ -276,93 +293,16 @@ describe('shift+click accumulation', () => {
     expect(h.cancels).toBe(1);
     expect(h.inspector.isActive()).toBe(false);
   });
-});
 
-describe('drag region', () => {
-  it('takes the outermost boxes the band fully covers', () => {
+  it('forgets an element that the page removed before Enter', () => {
     const h = mount();
-    move(5, 5);
-    down(5, 5);
-    move(320, 140);
-    up(320, 140);
+    pick(...IN_A, { shiftKey: true });
+    pick(...IN_B, { shiftKey: true });
+    document.getElementById('a')!.remove();
 
-    // list(10,10 300x120) 은 밴드 안에 통째로 들어간다 — 그 안의 a·b 는 조상이 잡혔으니 빠진다.
-    expect(h.inspector.getSelection().map((el) => el.id)).toEqual(['list']);
-    expect(h.inspector.isActive()).toBe(true);
-    expect(h.picked).toHaveLength(0);
-  });
+    keyDown('Enter');
 
-  it('drops to the buttons when the band clears only them', () => {
-    const h = mount();
-    move(15, 15);
-    down(15, 15);
-    move(290, 70);
-    up(290, 70);
-
-    expect(h.inspector.getSelection().map((el) => el.id)).toEqual(['a', 'b']);
-  });
-
-  it('adds to the selection when shift is held, replaces it otherwise', () => {
-    const h = mount();
-    pick(...IN_FAR, { shiftKey: true });
-
-    move(15, 15);
-    down(15, 15, { shiftKey: true });
-    move(290, 70);
-    up(290, 70, { shiftKey: true });
-    expect(h.inspector.getSelection().map((el) => el.id)).toEqual(['far', 'a', 'b']);
-
-    move(15, 15);
-    down(15, 15);
-    move(290, 70);
-    up(290, 70);
-    expect(h.inspector.getSelection().map((el) => el.id)).toEqual(['a', 'b']);
-  });
-
-  it('treats a two-pixel wobble as a click, not a drag', () => {
-    const h = mount();
-    move(...IN_A);
-    down(...IN_A);
-    move(IN_A[0] + 2, IN_A[1] + 1);
-    up(IN_A[0] + 2, IN_A[1] + 1);
-
-    expect(h.picked).toHaveLength(1);
-    expect(h.picked[0].id).toBe('a');
-  });
-
-  it('undoes only the drag on Escape, leaving the picker armed', () => {
-    const h = mount();
-    pick(...IN_FAR, { shiftKey: true });
-
-    move(15, 15);
-    down(15, 15);
-    move(290, 70);
-    keyDown('Escape');
-
-    expect(h.inspector.isActive()).toBe(true);
-    expect(h.cancels).toBe(0);
-    expect(h.inspector.getSelection().map((el) => el.id)).toEqual(['far']);
-  });
-
-  it('re-measures and still commits when the page scrolls mid-drag', () => {
-    const h = mount();
-    move(15, 15);
-    down(15, 15);
-    move(290, 70);
-    window.dispatchEvent(new Event('scroll'));
-    up(290, 70);
-
-    expect(h.inspector.getSelection().map((el) => el.id)).toEqual(['a', 'b']);
-  });
-
-  it('keeps the page blind through the whole drag', () => {
-    const h = mount();
-    move(5, 5);
-    down(5, 5);
-    move(320, 140);
-    up(320, 140);
-
-    expect(h.pageSaw).toEqual([]);
+    expect(h.pickedMany[0].map((r) => r.id)).toEqual(['b']);
   });
 });
 
@@ -373,17 +313,6 @@ describe('kill switch', () => {
 
     expect(h.picked).toHaveLength(1);
     expect(h.picked[0].id).toBe('a');
-    expect(h.inspector.isActive()).toBe(false);
-  });
-
-  it('multi:false ignores a drag and picks the press target', () => {
-    const h = mount({ multi: false });
-    move(...IN_A);
-    down(...IN_A);
-    move(320, 140);
-    up(320, 140);
-
-    expect(h.picked.map((r) => r.id)).toEqual(['a']);
     expect(h.inspector.isActive()).toBe(false);
   });
 
