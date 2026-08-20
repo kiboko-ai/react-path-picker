@@ -21,28 +21,33 @@ git push origin main && git push origin v0.3.0
 
 ## 사전 준비 (계정당 한 번)
 
-**세 곳을 봐야 한다.** 하나라도 어긋나면 `npm publish` 가 `EOTP` 로 죽는데, 에러 메시지는
-셋 다 똑같이 "one-time password 를 넣어라"라고만 해서 어디가 문제인지 안 알려준다.
+`npm publish` 가 `EOTP` 로 죽는 원인이 여러 개인데 에러 메시지는 전부 똑같이
+"one-time password 를 넣어라"라고만 나온다. 아래 순서대로 맞춰두면 다시 안 겪는다.
 
-### 1. 계정 2FA — write actions 해제
+### 1. 인증 앱(TOTP) 등록 — 로컬 배포를 하려면 필수
 
 npmjs.com → 우상단 아바타 → **Account** → **Two-Factor Authentication**
-→ 페이지 **하단의 `Additional Options`** 섹션
+→ **authenticator app** 을 2FA 수단으로 등록한다.
 
-1. `Additional Options` 로 내려간다
-2. **`Require two-factor authentication for write actions`** 체크를 **해제**한다
-3. 바로 아래 **`Update Preferences`** 버튼을 눌러 저장한다
+보안키·패스키만 등록돼 있으면 **6자리 코드를 만들 방법이 없어서 로컬 배포가 불가능하다.**
+패키지 2FA 요구는 끌 수 없기 때문이다 (아래 2번). CI 로만 배포할 거면 이 단계는 건너뛴다.
 
-> 체크만 풀고 `Update Preferences` 를 안 누르면 저장이 안 된다. 화면상 해제돼 보여도
-> 서버에는 반영되지 않는다.
+<details>
+<summary>같은 화면의 <code>Additional Options</code> 는 publish 와 무관하다</summary>
 
-확인:
+페이지 하단 `Additional Options` 에 **`Require two-factor authentication for write actions`**
+체크박스가 있다. 해제하고 바로 아래 **`Update Preferences`** 를 눌러야 저장된다
+(체크만 풀고 안 누르면 화면상 해제돼 보여도 서버에는 반영되지 않는다).
 
 ```bash
 npm profile get | grep two-factor
-# two-factor auth: auth-only        ← 이래야 한다
-# two-factor auth: auth-and-writes  ← 이러면 publish 마다 OTP 를 묻는다
+# auth-only        ← 해제된 상태
+# auth-and-writes  ← 체크된 상태
 ```
+
+**다만 이걸 `auth-only` 로 내려도 `npm publish` 는 안 풀린다.** 패키지 2FA 요구가 따로
+걸리기 때문이다. 배포 때문에 이 값을 건드리지 마라 — 계정 보안만 내려간다.
+</details>
 
 ### 2. 패키지 2FA 요구 — 끌 수 없다 (2026-08 확인)
 
@@ -149,9 +154,9 @@ node -e "console.log(Object.keys(require('react-path-picker')))"
 
 | # | 원인 | 확인 | 해결 |
 |---|---|---|---|
-| 1 | 계정이 `auth-and-writes` | `npm profile get \| grep two-factor` | [사전 준비 1](#1-계정-2fa--write-actions-해제) |
+| 1 | 인증 앱이 없어 6자리를 못 만든다 | npmjs.com 2FA 화면에 authenticator app 이 없다 | [사전 준비 1](#1-인증-앱totp-등록--로컬-배포를-하려면-필수) 또는 [CI 로 배포](#ci-로-배포하기) |
 | 2 | CLI 가 **granular access token** 으로 인증 중 | `npm token list` 가 비어 있고 `~/.npmrc` 에 `npm_` 40자 항목이 있다 | `npm login --auth-type=web` 로 세션 재발급 |
-| 3 | 패키지 publish 요구사항 | 웹에서만 확인 가능 | [사전 준비 2](#2-패키지-publish-요구사항) |
+| 3 | 패키지 2FA 요구 (끌 수 없다) | `npm access set mfa=none <pkg>` 가 403 | [사전 준비 2](#2-패키지-2fa-요구--끌-수-없다-2026-08-확인) |
 
 2번은 특히 헷갈린다. **`npm whoami` 는 통과하는데 `publish` 만 거부된다.** npm 이 2FA 우회
 토큰의 직접 배포를 제한하는 중이라 그렇다 (`npm login` 실행 시 뜨는 경고 참고:
