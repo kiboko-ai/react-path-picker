@@ -151,9 +151,17 @@ export class PathPickerInspector {
   private dragging = false;
   private pointer = { x: 0, y: 0 };
   private snapshot: RectSnapshot[] = [];
+  /** 스냅샷의 rect 를 element 로 바로 찾기 위한 색인. 프리뷰가 매 프레임 다시 재지 않게. */
+  private snapshotRects = new Map<Element, RectLike>();
+  private snapshotStale = false;
   private previewCount = 0;
   private regionDropped = 0;
   private rafId = 0;
+  /**
+   * 예약 여부는 id 와 따로 둔다. rAF 가 콜백을 동기적으로 부르는 환경(테스트 stub 등)에서는
+   * 콜백이 먼저 끝난 뒤에 id 가 대입되므로, id 하나로 판단하면 예약이 영영 안 풀린다.
+   */
+  private rafQueued = false;
 
   constructor(callbacks: InspectorCallbacks) {
     this.callbacks = callbacks;
@@ -335,13 +343,12 @@ export class PathPickerInspector {
     this.press = null;
     this.dragging = false;
     this.snapshot = [];
+    this.snapshotRects.clear();
+    this.snapshotStale = false;
     this.previewCount = 0;
     this.regionDropped = 0;
 
-    if (this.rafId && typeof cancelAnimationFrame !== 'undefined') {
-      cancelAnimationFrame(this.rafId);
-    }
-    this.rafId = 0;
+    this._cancelDragFrame();
 
     document.body.style.cursor = '';
     window.removeEventListener('mousemove', this.handleMouseMove, true);
@@ -506,9 +513,9 @@ export class PathPickerInspector {
     if (!this.active) return;
 
     if (this.dragging) {
-      // 스크롤로 문서가 움직였으면 스냅샷의 rect 도 낡았다.
-      this.snapshot = snapshotElements(document.body);
-      this._drawDrag();
+      // 스크롤로 문서가 움직였으면 스냅샷의 rect 도 낡았다. 다시 재는 건 다음 프레임에서.
+      this.snapshotStale = true;
+      this._scheduleDragFrame();
     } else if (this.lastTarget) {
       const rect = this.lastTarget.getBoundingClientRect();
       if (rect.width === 0 && rect.height === 0) {
@@ -691,8 +698,14 @@ export class PathPickerInspector {
     if (this.overlay) this.overlay.style.display = 'none';
     if (this.tooltip) this.tooltip.style.display = 'none';
     if (this.bandEl) this.bandEl.style.display = 'block';
-    // rect 는 여기서 한 번만 잰다. 이후 프레임은 순수 계산이라 레이아웃을 건드리지 않는다.
+    this._takeSnapshot();
+  }
+
+  /** rect 를 재는 유일한 자리. 드래그 시작과, 스크롤로 문서가 밀렸을 때만 부른다. */
+  private _takeSnapshot(): void {
     this.snapshot = snapshotElements(document.body);
+    this.snapshotRects = new Map(this.snapshot.map((item) => [item.el, item.rect]));
+    this.snapshotStale = false;
   }
 
   private _scheduleDragFrame(): void {
@@ -700,11 +713,20 @@ export class PathPickerInspector {
       this._drawDrag();
       return;
     }
-    if (this.rafId) return;
+    if (this.rafQueued) return;
+    this.rafQueued = true;
     this.rafId = requestAnimationFrame(() => {
-      this.rafId = 0;
+      this.rafQueued = false;
       this._drawDrag();
     });
+  }
+
+  private _cancelDragFrame(): void {
+    if (this.rafId && typeof cancelAnimationFrame !== 'undefined') {
+      cancelAnimationFrame(this.rafId);
+    }
+    this.rafId = 0;
+    this.rafQueued = false;
   }
 
   private _currentBand(press: PressState): Band {
@@ -718,6 +740,8 @@ export class PathPickerInspector {
 
   private _drawDrag(): void {
     if (!this.active || !this.dragging || !this.press) return;
+    // 스크롤은 연달아 들어온다. 프레임당 한 번으로 눌러 담는다.
+    if (this.snapshotStale) this._takeSnapshot();
     const band = this._currentBand(this.press);
 
     if (this.bandEl) {
@@ -733,11 +757,14 @@ export class PathPickerInspector {
     const { elements, dropped } = selectInBand(this.snapshot, band);
     this.previewCount = elements.length;
     this.regionDropped = dropped;
-    this.previews?.render(elements.map((el) => ({ rect: el.getBoundingClientRect() })));
+    this.previews?.render(
+      elements.map((el) => ({ rect: this.snapshotRects.get(el) ?? el.getBoundingClientRect() })),
+    );
     this._renderHud();
   }
 
   private _commitDrag(press: PressState, additive: boolean): void {
+    if (this.snapshotStale) this._takeSnapshot();
     const band = this._currentBand(press);
     // 몇 픽셀짜리 밴드는 손떨림으로 본다 — 선택을 건드리지 않는다.
     const tooSmall = bandArea(band) < MIN_BAND_AREA;
@@ -760,10 +787,9 @@ export class PathPickerInspector {
     this.dragging = false;
     this.previewCount = 0;
     this.snapshot = [];
-    if (this.rafId && typeof cancelAnimationFrame !== 'undefined') {
-      cancelAnimationFrame(this.rafId);
-    }
-    this.rafId = 0;
+    this.snapshotRects.clear();
+    this.snapshotStale = false;
+    this._cancelDragFrame();
     if (this.bandEl) this.bandEl.style.display = 'none';
     this.previews?.clear();
   }

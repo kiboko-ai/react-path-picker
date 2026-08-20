@@ -344,6 +344,17 @@ describe('drag region', () => {
     expect(h.inspector.getSelection().map((el) => el.id)).toEqual(['far']);
   });
 
+  it('re-measures and still commits when the page scrolls mid-drag', () => {
+    const h = mount();
+    move(15, 15);
+    down(15, 15);
+    move(290, 70);
+    window.dispatchEvent(new Event('scroll'));
+    up(290, 70);
+
+    expect(h.inspector.getSelection().map((el) => el.id)).toEqual(['a', 'b']);
+  });
+
   it('keeps the page blind through the whole drag', () => {
     const h = mount();
     move(5, 5);
