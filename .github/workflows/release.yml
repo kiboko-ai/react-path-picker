@@ -41,12 +41,18 @@ jobs:
           fi
           echo "releasing $PKG"
 
+      # 이미 올라간 버전은 npm 이 재업로드를 거절한다. 다만 손으로 먼저 배포하고 태그를
+      # 나중에 붙이는 순서에서도 이건 정상이므로, 실패가 아니라 건너뛰기로 처리한다.
+      # (v0.1.9 가 정확히 이 순서였고 그래서 빨간 X 가 떴다.)
       - name: Already on npm?
+        id: published
         run: |
           PKG="$(node -p "require('./package.json').version")"
           if npm view "react-path-picker@$PKG" version >/dev/null 2>&1; then
-            echo "::error::react-path-picker@$PKG is already published"
-            exit 1
+            echo "::notice::react-path-picker@$PKG is already on npm — skipping the publish step"
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Install
@@ -64,6 +70,7 @@ jobs:
       # prepublishOnly 가 typecheck·test·build 를 한 번 더 돌린다. 위 단계는 어디서
       # 깨졌는지 로그로 바로 보이게 하려는 것.
       - name: Publish
+        if: steps.published.outputs.skip != 'true'
         run: npm publish --provenance --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
