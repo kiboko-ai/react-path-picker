@@ -24,7 +24,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
           cache: npm
           registry-url: https://registry.npmjs.org
 
@@ -69,13 +69,10 @@ jobs:
 
       # publish 가 404 로 죽으면 npm 이 '권한 없음'을 숨긴 것이다(패키지 존재를 안 알리려고).
       # 토큰이 누구로 인증되는지 먼저 찍어야 원인이 갈린다 — 사용자명만 나오고 토큰은 안 나온다.
-      # Trusted Publishing(OIDC)은 npm 11.5.1+ 에서만 동작한다. Node 20 은 npm 10 을 싣고 온다.
-      # 설치·테스트·빌드는 위에서 Node 20 기본 npm 으로 이미 끝났으므로 여기서만 올린다.
-      - name: Upgrade npm for trusted publishing
-        if: steps.published.outputs.skip != 'true'
-        run: |
-          npm install -g npm@latest
-          npm --version
+      # Trusted Publishing(OIDC)은 npm 11.5.1+ 에서만 동작한다. Node 24 가 npm 11 을 싣고
+      # 오므로 따로 올리지 않는다 — npm@latest 는 Node 22+ 를 요구해서 Node 20 에서는 깔리지도 않는다.
+      - name: npm version
+        run: npm --version
 
       # 토큰이 없다. npmjs.com 에 이 저장소·워크플로가 Trusted Publisher 로 등록돼 있어서,
       # OIDC 로 받은 단기 신원으로 배포한다. prepublishOnly 가 typecheck·test·build 를
