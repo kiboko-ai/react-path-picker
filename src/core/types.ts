@@ -21,8 +21,19 @@ export interface PathPickerResult {
 
 export interface InspectorCallbacks {
   onPick: (result: PathPickerResult) => void;
+  /**
+   * Fired when a multi-element selection is confirmed with Enter.
+   * Multi-select and drag-region select stay off unless this is supplied — a caller that
+   * only knows how to handle one result never gets handed an array it can't use.
+   */
+  onPickMany?: (results: PathPickerResult[]) => void;
   onCancel: () => void;
   getRoute: () => string;
   /** Explicit project label. Overrides the root auto-derived from React dev source info. */
   getProject?: () => string | null | undefined;
+  /**
+   * Shift+click accumulation and drag-region select. `true` by default, and still needs
+   * `onPickMany`. Set `false` for the original one-pick-then-close behavior.
+   */
+  multi?: boolean;
 }
