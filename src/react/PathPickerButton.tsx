@@ -2,17 +2,10 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { usePathPicker, type UsePathPickerOptions } from './usePathPicker';
+import { describeHotkey } from './hotkey';
 
 /** 버튼 위에서 페이지로 새어 나가면 안 되는 이벤트. */
 const PRESS_EVENTS = ['pointerdown', 'mousedown', 'pointerup', 'mouseup', 'click'] as const;
-
-const formatHotkey = (spec: string) =>
-  spec
-    .split('+')
-    .map((p) => p.trim())
-    .filter(Boolean)
-    .map((p) => p.charAt(0).toUpperCase() + p.slice(1))
-    .join('+');
 
 const AimIcon = () => (
   <svg
@@ -43,13 +36,25 @@ export interface PathPickerButtonProps {
   project?: string;
   /** Active accent color (default: #329D9C). */
   color?: string;
-  /** Custom handler invoked after a successful pick (default: clipboard copy). */
+  /** Custom handler invoked after a single-element pick (default: clipboard copy). */
   onPick?: UsePathPickerOptions['onPick'];
   /**
-   * Keyboard shortcut that toggles picking — `"alt+p"` by default. Reach for it when clicking
-   * the button would close what you want to pick, like an open dropdown. `false` disables it.
+   * Custom handler invoked when a multi-element selection is confirmed with Enter
+   * (default: clipboard copy). Passing only `onPick` does not cover this path.
+   */
+  onPickMany?: UsePathPickerOptions['onPickMany'];
+  /**
+   * Keyboard shortcut that arms picking — double-tap `Shift` by default. Reach for it when
+   * clicking the button would close what you want to pick, like an open dropdown.
+   * Accepts `"alt+p"`-style combos, `"shift shift"`-style double-taps, or an array.
+   * `false` disables it.
    */
   hotkey?: UsePathPickerOptions['hotkey'];
+  /**
+   * Shift+click accumulation and drag-region select (default: `true`).
+   * `false` restores the original one-pick-then-close behavior.
+   */
+  multi?: UsePathPickerOptions['multi'];
 }
 
 export function PathPickerButton({
@@ -57,11 +62,20 @@ export function PathPickerButton({
   project,
   color = '#329D9C',
   onPick,
+  onPickMany,
   hotkey,
+  multi,
 }: PathPickerButtonProps) {
   const [hovered, setHovered] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
-  const { isActive, justCopied, toggle } = usePathPicker({ pathname, project, onPick, hotkey });
+  const { isActive, justCopied, toggle } = usePathPicker({
+    pathname,
+    project,
+    onPick,
+    onPickMany,
+    hotkey,
+    multi,
+  });
 
   const toggleRef = useRef(toggle);
   toggleRef.current = toggle;
@@ -100,7 +114,7 @@ export function PathPickerButton({
   }, []);
 
   const label = justCopied ? 'Copied!' : isActive ? 'Pick…' : null;
-  const hotkeyLabel = hotkey === false ? null : formatHotkey(hotkey ?? 'alt+p');
+  const hotkeyLabel = describeHotkey(hotkey ?? 'shift shift');
 
   return (
     <div

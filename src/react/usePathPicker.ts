@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { PathPickerInspector } from '../core/inspector';
 import type { PathPickerResult } from '../core/types';
+import { createHotkeyMatcher } from './hotkey';
 
 async function copyToClipboard(text: string): Promise<boolean> {
   try {
@@ -25,43 +26,41 @@ export function formatResult(r: PathPickerResult): string {
   return lines.join(', ');
 }
 
-const DEFAULT_HOTKEY = 'alt+p';
+/**
+ * 여러 개를 한 번에 넘길 때의 표기. Origin·Project·Route 는 어차피 같은 페이지라
+ * 맨 위에 한 번만 쓰고 아래에 번호를 붙인다 — 반복이 곧 토큰이다.
+ * 하나뿐이면 formatResult 그대로라 단일 픽 출력은 달라지지 않는다.
+ */
+export function formatResults(results: PathPickerResult[]): string {
+  if (results.length === 0) return '';
+  if (results.length === 1) return formatResult(results[0]);
+
+  const first = results[0];
+  const head = [`[xPathInfo] ${results.length} elements`];
+  if (first.origin) head.push(`Origin: ${first.origin}`);
+  if (first.project) head.push(`Project: ${first.project}`);
+  head.push(`Route: ${first.route}`);
+
+  const lines = results.map((r, i) => {
+    const parts = [`XPath: ${r.xpath}`, `CSS: ${r.cssSelector}`];
+    if (r.reactComponent) {
+      const src = r.reactSource ? ` (${r.reactSource})` : '';
+      parts.push(`React: ${r.reactComponent}${src}`);
+    }
+    return `${i + 1}. ${parts.join(', ')}`;
+  });
+
+  return [head.join(', '), ...lines].join('\n');
+}
 
 /**
- * `"alt+p"`, `"ctrl+shift+k"` 같은 조합을 실제 keydown 과 대조한다.
- * Alt 조합은 브라우저가 e.key 를 다른 문자로 바꿔 주므로(macOS 의 Alt+P → π) 물리 키를 먼저 본다.
+ * 수식키 더블탭. 브라우저가 아무것도 바인딩하지 않는 사실상 유일한 자리라
+ * 어떤 브라우저 단축키와도 겹치지 않는다. 근거는 ./hotkey.ts 주석.
  */
-function matchesHotkey(e: KeyboardEvent, spec: string): boolean {
-  const parts = spec
-    .toLowerCase()
-    .split('+')
-    .map((p) => p.trim())
-    .filter(Boolean);
-  const key = parts.pop();
-  if (!key) return false;
+const DEFAULT_HOTKEY = 'shift shift';
 
-  const want = { alt: false, ctrl: false, meta: false, shift: false };
-  for (const p of parts) {
-    if (p === 'alt' || p === 'option' || p === 'opt') want.alt = true;
-    else if (p === 'ctrl' || p === 'control') want.ctrl = true;
-    else if (p === 'meta' || p === 'cmd' || p === 'command') want.meta = true;
-    else if (p === 'shift') want.shift = true;
-    else return false;
-  }
-
-  if (
-    e.altKey !== want.alt ||
-    e.ctrlKey !== want.ctrl ||
-    e.metaKey !== want.meta ||
-    e.shiftKey !== want.shift
-  ) {
-    return false;
-  }
-
-  if (/^[a-z]$/.test(key) && e.code === `Key${key.toUpperCase()}`) return true;
-  if (/^[0-9]$/.test(key) && e.code === `Digit${key}`) return true;
-  return e.key.toLowerCase() === key;
-}
+/** 스펙 자체에는 절대 안 들어가는 문자. 공백은 더블탭 문법이 이미 쓰고 있다. */
+const SPEC_SEPARATOR = ',';
 
 export interface UsePathPickerOptions {
   /** Current route. Defaults to window.location.pathname when omitted. */
@@ -72,20 +71,40 @@ export interface UsePathPickerOptions {
    * Omit to auto-derive the repo root from React's dev source info.
    */
   project?: string;
-  /** Custom handler invoked after a successful pick. Defaults to clipboard copy. */
+  /** Custom handler invoked after a single-element pick. Defaults to clipboard copy. */
   onPick?: (result: PathPickerResult, formatted: string) => void;
   /**
-   * Keyboard shortcut that toggles picking — `"alt+p"` by default.
-   * Use it when clicking the button would close what you want to pick: an open dropdown or
-   * popover survives a keystroke, but not an outside click. Pass `false` to disable.
+   * Custom handler invoked when a multi-element selection is confirmed with Enter.
+   * Defaults to clipboard copy — passing only `onPick` does not cover this path.
    */
-  hotkey?: string | false;
+  onPickMany?: (results: PathPickerResult[], formatted: string) => void;
+  /**
+   * Keyboard shortcut that arms picking — double-tap `Shift` by default. Reach for it when
+   * clicking the button would close what you want to pick: an open dropdown or popover
+   * survives a keystroke, but not an outside click.
+   *
+   * Accepts a combo (`"alt+p"`, toggles), a double-tap (`"shift shift"`, arms only), or an
+   * array of either. `false` turns it off.
+   */
+  hotkey?: string | string[] | false;
+  /**
+   * Shift+click accumulation and drag-region select. `true` by default.
+   * Set `false` for the original one-pick-then-close behavior.
+   */
+  multi?: boolean;
 }
 
 export function usePathPicker(options?: string | UsePathPickerOptions) {
   const opts: UsePathPickerOptions =
     typeof options === 'string' ? { pathname: options } : options ?? {};
-  const { pathname, project, onPick: onPickProp, hotkey = DEFAULT_HOTKEY } = opts;
+  const {
+    pathname,
+    project,
+    onPick: onPickProp,
+    onPickMany: onPickManyProp,
+    hotkey = DEFAULT_HOTKEY,
+    multi = true,
+  } = opts;
 
   const [isActive, setIsActive] = useState(false);
   const [justCopied, setJustCopied] = useState(false);
@@ -99,6 +118,13 @@ export function usePathPicker(options?: string | UsePathPickerOptions) {
 
   const getProject = useCallback(() => project ?? null, [project]);
 
+  const settle = useCallback(() => {
+    setIsActive(false);
+    setJustCopied(true);
+    clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(() => setJustCopied(false), 1200);
+  }, []);
+
   const handlePick = useCallback(
     (result: PathPickerResult) => {
       const text = formatResult(result);
@@ -107,12 +133,22 @@ export function usePathPicker(options?: string | UsePathPickerOptions) {
       } else {
         copyToClipboard(text).catch(() => {});
       }
-      setIsActive(false);
-      setJustCopied(true);
-      clearTimeout(timerRef.current);
-      timerRef.current = setTimeout(() => setJustCopied(false), 1200);
+      settle();
     },
-    [onPickProp],
+    [onPickProp, settle],
+  );
+
+  const handlePickMany = useCallback(
+    (results: PathPickerResult[]) => {
+      const text = formatResults(results);
+      if (onPickManyProp) {
+        onPickManyProp(results, text);
+      } else {
+        copyToClipboard(text).catch(() => {});
+      }
+      settle();
+    },
+    [onPickManyProp, settle],
   );
 
   const handleCancel = useCallback(() => {
@@ -129,30 +165,59 @@ export function usePathPicker(options?: string | UsePathPickerOptions) {
     });
   }, []);
 
+  const arm = useCallback(() => setIsActive(true), []);
+
+  // 배열 스펙이 렌더마다 새 identity 로 들어와도 리스너를 다시 걸지 않도록 문자열로 눌러 담는다.
+  const hotkeySpec =
+    hotkey === false
+      ? ''
+      : (Array.isArray(hotkey) ? hotkey : [hotkey]).filter(Boolean).join(SPEC_SEPARATOR);
+
   useEffect(() => {
-    if (hotkey === false || typeof window === 'undefined') return;
+    if (!hotkeySpec || typeof window === 'undefined') return;
+
+    const matcher = createHotkeyMatcher(hotkeySpec.split(SPEC_SEPARATOR));
+
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.repeat || !matchesHotkey(e, hotkey)) return;
+      const action = matcher.onKeyDown(e);
+      if (!action) return;
       e.preventDefault();
       e.stopPropagation();
-      toggle();
+      if (action === 'toggle') toggle();
+      else arm();
     };
+    const onKeyUp = (e: KeyboardEvent) => matcher.onKeyUp(e);
+    // 포인터를 누르면 타이핑 흐름이 끊긴 것으로 본다 — Shift+클릭 누적이 더블탭으로 오인되는 걸 막는다.
+    const onInterrupt = () => matcher.reset();
+
     window.addEventListener('keydown', onKeyDown, true);
-    return () => window.removeEventListener('keydown', onKeyDown, true);
-  }, [hotkey, toggle]);
+    window.addEventListener('keyup', onKeyUp, true);
+    window.addEventListener('pointerdown', onInterrupt, true);
+    window.addEventListener('mousedown', onInterrupt, true);
+    window.addEventListener('blur', onInterrupt);
+    return () => {
+      window.removeEventListener('keydown', onKeyDown, true);
+      window.removeEventListener('keyup', onKeyUp, true);
+      window.removeEventListener('pointerdown', onInterrupt, true);
+      window.removeEventListener('mousedown', onInterrupt, true);
+      window.removeEventListener('blur', onInterrupt);
+    };
+  }, [hotkeySpec, toggle, arm]);
 
   useEffect(() => {
     if (!isActive) return;
     const inspector = new PathPickerInspector({
       onPick: handlePick,
+      onPickMany: handlePickMany,
       onCancel: handleCancel,
       getRoute,
       getProject,
+      multi,
     });
     inspectorRef.current = inspector;
     inspector.activate();
     return () => inspector.deactivate();
-  }, [isActive, handlePick, handleCancel, getRoute, getProject]);
+  }, [isActive, handlePick, handlePickMany, handleCancel, getRoute, getProject, multi]);
 
   useEffect(() => {
     return () => {
