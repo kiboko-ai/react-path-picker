@@ -206,19 +206,32 @@ Trusted Publishing 으로 충족되므로, OTP 없이 배포되는 유일한 경
 
 ### 켜는 법
 
-**1) 토큰 발급** — npmjs.com → 우상단 아바타 → **Access Tokens** → **Generate New Token**
-→ **Granular Access Token**
+세팅은 **npmjs.com 에서 하나, GitHub 에서 하나**다.
 
-- Packages: `react-path-picker` 만, **Read and write**
-- **`Allow token to bypass 2FA` 를 켠다** ← 이게 없으면 CI 도 OTP 를 요구받는다
-- Expiration: 90일 이상 (짧으면 조용히 만료돼 다음 배포에서 또 막힌다)
+#### npmjs.com — 토큰 발급
 
-**2) 시크릿 등록**
+프로필 사진(우상단) → **Access Tokens** → **Generate New Token** → **Granular Access Token**
+
+| 항목 | 값 |
+|---|---|
+| **Token name** | `github-actions-release` 처럼 용도가 보이는 이름 |
+| **Bypass two-factor authentication** | **체크한다** ← 안 켜면 CI 도 OTP 를 요구받아 실패한다 |
+| **Expiration** | 90일 이상. 짧으면 조용히 만료돼 다음 배포에서 또 막힌다 |
+| **Packages and scopes** → Permissions | **Read and write** |
+| **Packages and scopes** → Select Packages | **Only select packages and scopes** → `react-path-picker` |
+| **Organizations** → Permissions | **No access** (배포에 필요 없다) |
+
+**Generate Token** 을 누르면 토큰이 **딱 한 번** 보인다. 그 화면을 벗어나면 다시 못 본다.
+
+#### GitHub — 시크릿 등록
 
 ```bash
 gh secret set NPM_TOKEN --repo kiboko-ai/react-path-picker
-# ? Paste your secret:  ← 여기에 토큰을 붙여넣는다
+# ? Paste your secret:  ← 여기에 붙여넣는다
 ```
+
+웹으로 하려면: 저장소 → **Settings** → 좌측 **Secrets and variables** → **Actions**
+→ **New repository secret** → Name `NPM_TOKEN`, Secret 에 토큰 붙여넣기 → **Add secret**
 
 > **`gh secret set` 의 인자는 값이 아니라 이름이다.**
 > `gh secret set npm_abc123...` 처럼 토큰을 인자로 주면 **토큰이 시크릿 이름**이 되고,
