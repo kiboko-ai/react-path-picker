@@ -254,7 +254,7 @@
             <div class="w-8 h-8 rounded-lg bg-pp/20 flex items-center justify-center text-pp font-mono text-sm font-bold">1</div>
             <p class="text-white font-semibold text-sm">Click the aim icon</p>
           </div>
-          <p class="text-sm text-slate-400 mb-4">A small target icon sits fixed in the top-right of your dev build. Click it to arm the inspector.</p>
+          <p class="text-sm text-slate-400 mb-4">A small target icon sits fixed in the top-right of your dev build. Click it to arm the inspector — or tap <code class="text-pp text-xs">Shift</code> twice, the one gesture no browser has claimed.</p>
           <div class="bg-pp-dark border border-slate-700 rounded-lg h-20 flex items-center justify-center">
             <svg width="28" height="28" viewBox="0 0 16 16" fill="none" stroke="#329D9C" stroke-width="1.5">
               <circle cx="8" cy="8" r="5.5"/>
@@ -351,6 +351,14 @@
 
         <div class="feature-card bg-pp-surface border border-slate-700 rounded-xl p-6">
           <div class="w-10 h-10 rounded-lg bg-pp/10 flex items-center justify-center mb-4">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#329D9C" stroke-width="2"><rect x="3" y="3" width="8" height="8" rx="1"/><rect x="13" y="3" width="8" height="8" rx="1"/><rect x="3" y="13" width="8" height="8" rx="1"/><path d="M14 17.5l2.5 2.5 4.5-5" stroke-dasharray="0"/></svg>
+          </div>
+          <h3 class="text-white font-semibold mb-2">Three elements, one paste</h3>
+          <p class="text-sm text-slate-400">Shift+click to stack picks, or drag a box around them. <code class="text-pp text-xs">Enter</code> copies them all under one shared header, so the origin and route are written once instead of three times.</p>
+        </div>
+
+        <div class="feature-card bg-pp-surface border border-slate-700 rounded-xl p-6">
+          <div class="w-10 h-10 rounded-lg bg-pp/10 flex items-center justify-center mb-4">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#329D9C" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
           </div>
           <h3 class="text-white font-semibold mb-2">Works on plain HTML too</h3>
@@ -386,6 +394,12 @@
               </tr>
               <tr>
                 <td class="px-4 py-3">Single-line clipboard format for AI prompts</td>
+                <td class="px-3 py-3 text-center text-slate-600">—</td>
+                <td class="px-3 py-3 text-center text-slate-600">—</td>
+                <td class="px-3 py-3 text-center text-pp font-bold">✓</td>
+              </tr>
+              <tr>
+                <td class="px-4 py-3">Several elements in one paste</td>
                 <td class="px-3 py-3 text-center text-slate-600">—</td>
                 <td class="px-3 py-3 text-center text-slate-600">—</td>
                 <td class="px-3 py-3 text-center text-pp font-bold">✓</td>
@@ -650,7 +664,7 @@ console.log(getCssSelector(el));  // main.layout-content</code></pre>
           <tbody class="text-slate-300 divide-y divide-slate-700">
             <tr>
               <td class="font-mono text-pp text-xs px-4 py-3">PathPickerButton</td>
-              <td class="font-mono text-xs text-slate-400 px-4 py-3">{ pathname?, project?, color?, onPick? }</td>
+              <td class="font-mono text-xs text-slate-400 px-4 py-3">{ pathname?, project?, color?, onPick?, onPickMany?, hotkey?, multi? }</td>
               <td class="text-xs px-4 py-3">React button + overlay. Drop into your dev layout.</td>
             </tr>
             <tr>
