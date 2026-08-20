@@ -1,106 +1,32 @@
 # 릴리스 절차
 
-npm 배포가 매번 다른 데서 막혀서, **막혔던 지점과 그때의 정확한 화면·명령**까지 적어둔다.
-처음이면 [사전 준비](#사전-준비-계정당-한-번)부터, 이미 세팅돼 있으면 [릴리스](#릴리스)로 바로 간다.
+**배포는 GitHub Actions 가 한다. `npm publish` 를 손으로 치지 않는다.**
+토큰도 필요 없다 — npmjs.com 에 이 저장소가 Trusted Publisher 로 등록돼 있다.
+
+태그를 밀면 워크플로가 검사·빌드를 거쳐 **npm 에 실제로 올린다.** 0.2.0 이 이 방식으로 나갔다.
+
+> 여기까지 오는 데 여러 번 막혔다. 막힌 지점과 그때의 정확한 화면·명령을
+> [막혔을 때](#막혔을-때)에 남겨뒀다. 같은 자리에서 두 번 헤매지 않으려고 적은 것이다.
 
 ---
 
 ## TL;DR
 
-세팅이 끝나 있다면 이게 전부다.
-
 ```bash
 git checkout main && git pull
+git merge <feature-branch>
+
 npm run typecheck && npm test && npm run build   # 미리 깨진 걸 잡는다
+npm pack --dry-run                                # 무엇이 올라가는지 눈으로 본다
+
 npm version 0.3.0 -m "chore: release %s"          # package.json + 커밋 + v0.3.0 태그
 git push origin main
-git push origin v0.3.0                            # ← 이 줄이 배포다. CI 가 npm 에 올린다
+git push origin v0.3.0                            # ← 이 줄이 npm 배포까지 한다
 gh run watch
 ```
 
-`npm publish` 를 손으로 치지 않는다 — [쓸 수 없다](#1-로컬-npm-publish-는-쓸-수-없다).
-
----
-
-## 사전 준비 (계정당 한 번)
-
-`npm publish` 가 `EOTP` 로 죽는 원인이 여러 개인데 에러 메시지는 전부 똑같이
-"one-time password 를 넣어라"라고만 나온다. 아래 순서대로 맞춰두면 다시 안 겪는다.
-
-### 1. 로컬 `npm publish` 는 쓸 수 없다
-
-npm 의 2FA 수단은 **보안키뿐이다** — Touch ID·Face ID·Windows Hello·YubiKey 등.
-authenticator app(TOTP)은 지원 목록에서 빠졌다
-(<https://docs.npmjs.com/about-two-factor-authentication>).
-
-그런데 `npm publish` 는 `--otp=<6자리>` 만 받는다. **만들 수 있는 6자리가 없으므로 로컬 CLI
-배포는 불가능하다.** 패키지 2FA 요구도 끌 수 없다(아래 2번).
-
-같은 문서가 배포 조건을 이렇게 적는다 — 2FA 이거나, **`bypass 2FA` 가 켜진 granular access
-token**. 후자가 [CI 배포](#ci-로-배포하기)가 서 있는 자리다. **이 저장소의 배포 경로는 CI 하나다.**
-
-<details>
-<summary>같은 화면의 <code>Additional Options</code> 는 publish 와 무관하다</summary>
-
-페이지 하단 `Additional Options` 에 **`Require two-factor authentication for write actions`**
-체크박스가 있다. 해제하고 바로 아래 **`Update Preferences`** 를 눌러야 저장된다
-(체크만 풀고 안 누르면 화면상 해제돼 보여도 서버에는 반영되지 않는다).
-
-```bash
-npm profile get | grep two-factor
-# auth-only        ← 해제된 상태
-# auth-and-writes  ← 체크된 상태
-```
-
-**다만 이걸 `auth-only` 로 내려도 `npm publish` 는 안 풀린다.** 패키지 2FA 요구가 따로
-걸리기 때문이다. 배포 때문에 이 값을 건드리지 마라 — 계정 보안만 내려간다.
-</details>
-
-### 2. 패키지 2FA 요구 — 끌 수 없다 (2026-08 확인)
-
-npm 이 **모든 패키지에 2FA 요구를 강제**한다. 끄려고 하면 거부당한다:
-
-```bash
-$ npm access set mfa=none react-path-picker
-npm error 403 Forbidden - POST https://registry.npmjs.org/-/package/react-path-picker/access
-npm error 403 Two factor authentication package setting is required on all packages.
-```
-
-**여기서 따라오는 결론이 이 문서에서 제일 중요하다:**
-
-- 로컬 `npm publish` 는 **TOTP 6자리가 반드시 필요하다**
-- 보안키·패스키만 등록된 계정은 그 6자리를 만들 수 없다 → **CLI 직접 배포가 불가능하다**
-- 계정 2FA 를 `auth-only` 로 낮춰도 **이건 안 풀린다.** 패키지 정책이 따로 걸리기 때문이다.
-  (낮췄다면 되돌려라 — 배포에 도움이 안 되면서 계정 보안만 내려간다.)
-
-그래서 길은 둘뿐이다:
-
-| 방법 | 배포할 때 하는 일 | 비고 |
-|---|---|---|
-| **인증 앱(TOTP) 추가** | 매번 `--otp=<6자리>` 를 직접 친다 | 로컬 배포 유지 |
-| **CI 에서 배포** | 태그만 민다 | OTP 없음. [아래 참고](#ci-로-배포하기) |
-
-### 3. 로그인 — 세션으로, 토큰 말고
-
-```bash
-npm login --auth-type=web
-```
-
-`--auth-type=web` 를 **반드시 붙인다.** 안 붙이면 legacy 방식으로 떨어져서 브라우저 URL 을
-띄우면서 동시에 `Username:` 을 묻고, 그대로 두면 exit 1 로 끝난다.
-
-보안키·패스키를 쓰면 브라우저에서 그대로 인증된다 — 6자리 코드가 없어도 된다.
-
-확인:
-
-```bash
-npm whoami                              # jay-kiboko
-npm access list packages | grep react-path-picker   # react-path-picker: read-write
-```
-
----
-
-## 릴리스
+**문서를 고칠 게 있으면 `npm version` 전에 끝내라.** `README.md` 는 tarball 에 같이
+올라가므로, 버전을 올린 뒤 고치면 npm 에는 옛 README 가 박힌다.
 
 ### 버전 정하기
 
@@ -112,38 +38,11 @@ npm access list packages | grep react-path-picker   # react-path-picker: read-wr
 | 기능 추가인데 기존 동작은 그대로 | minor | |
 | 버그 수정·문서 | patch | 0.2.0 → 0.2.1 |
 
-### 순서
-
-```bash
-# 1. main 에 합치고 최신화
-git checkout main && git pull
-git merge <feature-branch>
-
-# 2. 먼저 초록인지 확인 — prepublishOnly 가 또 돌지만, 여기서 깨지면 로그가 더 읽기 쉽다
-npm run typecheck && npm test && npm run build
-
-# 3. 무엇이 올라가는지 눈으로 본다 (dist + README + LICENSE 만 나가야 한다)
-npm pack --dry-run
-
-# 4. 버전 + 커밋 + 태그를 한 번에
-npm version 0.3.0 -m "chore: release %s"
-
-# 5. 푸시 (main 을 먼저, 태그를 나중에). 태그 푸시가 CI 배포를 트리거한다
-git push origin main
-git push origin v0.3.0
-
-# 6. 지켜본다
-gh run watch
-```
-
-**문서를 고칠 게 있으면 4번 전에 끝내라.** `README.md` 는 tarball 에 같이 올라가므로,
-버전을 올린 뒤 README 를 고치면 npm 에는 옛 README 가 박힌다.
-
 ### 배포 후 확인
 
 ```bash
-npm view react-path-picker version      # 방금 올린 버전
-npm view react-path-picker dist-tags    # latest 가 그 버전인지
+npm view react-path-picker version                       # 방금 올린 버전
+npm view react-path-picker@0.3.0 dist.attestations       # provenance 서명 확인
 
 cd $(mktemp -d) && npm init -y >/dev/null && npm i react-path-picker
 node -e "console.log(Object.keys(require('react-path-picker')))"
@@ -151,127 +50,152 @@ node -e "console.log(Object.keys(require('react-path-picker')))"
 
 ---
 
+## 왜 CI 로만 배포하는가
+
+로컬 `npm publish` 는 **이 계정에서 성립하지 않는다.** 세 가지가 맞물려 있다.
+
+1. npm 은 **모든 패키지에 2FA publish 를 강제한다.** 끌 수 없다:
+
+   ```
+   $ npm access set mfa=none react-path-picker
+   npm error 403 Two factor authentication package setting is required on all packages.
+   ```
+
+2. `npm publish` 가 받는 2FA 는 **`--otp=<6자리>` 뿐**이다.
+
+3. npm 의 2FA 수단은 **보안키뿐이다** — Touch ID·Face ID·Windows Hello·YubiKey.
+   authenticator app(TOTP)은 지원 목록에 없다
+   (<https://docs.npmjs.com/about-two-factor-authentication>).
+
+만들 수 있는 6자리가 없으니 로컬 CLI 배포는 불가능하다. 남는 건 CI 다.
+
+---
+
+## 세팅 (한 번만, 이미 되어 있음)
+
+### npmjs.com — Trusted Publisher 등록
+
+npmjs.com → 프로필 → **Packages** → **react-path-picker** → **Settings**
+→ **Trusted Publisher** → **GitHub Actions**
+
+| 항목 | 값 |
+|---|---|
+| Organization or user | `kiboko-ai` |
+| Repository | `react-path-picker` |
+| Workflow filename | `release.yml` |
+| Environment | (비워둔다) |
+
+이걸로 끝이다. **토큰을 만들지 않는다.** GitHub Actions 가 OIDC 로 받은 단기 신원으로
+배포하므로 발급·보관·폐기·만료가 전부 사라진다.
+
+### GitHub — 할 일 없음
+
+`release.yml` 에 시크릿 참조가 없다. `permissions: id-token: write` 만 있으면 되고
+이미 들어가 있다.
+
+### 워크플로가 지켜야 하는 것
+
+- **`node-version: 24`** — Trusted Publishing 은 npm 11.5.1+ 에서만 동작한다.
+  Node 20 은 npm 10 을 싣고 오고, `npm i -g npm@latest` 로 올리려 해도 npm 12 가
+  Node 22+ 를 요구해 `EBADENGINE` 으로 설치조차 안 된다.
+- **`npm publish --provenance --access public`** — 토큰 env 없이.
+
+---
+
+## 워크플로가 하는 일
+
+`v*` 태그 푸시(또는 수동 실행)에 반응한다.
+
+```
+태그↔package.json 버전 일치 확인   ← 어긋나면 여기서 중단
+이미 npm 에 있는 버전인지 확인      ← 있으면 publish 만 건너뛰고 초록으로 끝낸다
+npm ci → typecheck → test → build
+npm publish --provenance --access public   ← 실제 npm 업로드
+```
+
+중복 확인이 **실패가 아니라 건너뛰기**인 이유: 손으로 먼저 배포하고 태그를 나중에 붙이는
+순서에서도 빨간 X 가 안 뜨게 하려고. (`v0.1.9` 가 그 순서였고 예전 가드는 `exit 1` 이었다.)
+
+수동 실행:
+
+```bash
+gh workflow run "Publish to npm" --ref main
+gh run watch
+```
+
+태그 없이 `main` 기준으로 돌면 버전 일치 검사는 건너뛰고 `package.json` 버전으로 배포한다.
+
+---
+
 ## 막혔을 때
 
-### `npm error code EOTP`
+### `EOTP` — one-time password 를 요구한다
 
-> This operation requires a one-time password from your authenticator.
+로컬에서 `npm publish` 를 친 것이다. [쓸 수 없다](#왜-ci-로만-배포하는가). CI 로 가라.
 
-**메시지는 하나인데 원인은 셋이다.** 위에서부터 순서대로 확인한다.
-
-| # | 원인 | 확인 | 해결 |
-|---|---|---|---|
-| 1 | 인증 앱이 없어 6자리를 못 만든다 | npmjs.com 2FA 화면에 authenticator app 이 없다 | [사전 준비 1](#1-인증-앱totp-등록--로컬-배포를-하려면-필수) 또는 [CI 로 배포](#ci-로-배포하기) |
-| 2 | CLI 가 **granular access token** 으로 인증 중 | `npm token list` 가 비어 있고 `~/.npmrc` 에 `npm_` 40자 항목이 있다 | `npm login --auth-type=web` 로 세션 재발급 |
-| 3 | 패키지 2FA 요구 (끌 수 없다) | `npm access set mfa=none <pkg>` 가 403 | [사전 준비 2](#2-패키지-2fa-요구--끌-수-없다-2026-08-확인) |
-
-2번은 특히 헷갈린다. **`npm whoami` 는 통과하는데 `publish` 만 거부된다.** npm 이 2FA 우회
-토큰의 직접 배포를 제한하는 중이라 그렇다 (`npm login` 실행 시 뜨는 경고 참고:
-<https://gh.io/npm-gat-bypass2fa-deprecation>).
-
-`--auth-type=web` 는 **login 에만** 적용된다. `npm publish --auth-type=web` 는 아무 효과가 없다 —
-publish 는 여전히 TOTP 6자리만 받는다.
-
-### 6자리를 만들 방법이 없다
-
-npm 2FA 는 보안키만 지원하고 `npm publish` 는 6자리만 받는다. 맞물리는 지점이 없다.
-[CI 로 배포](#ci-로-배포하기)하는 것 말고는 방법이 없다.
+`--auth-type=web` 는 **login 에만** 적용된다. `npm publish --auth-type=web` 는 아무 효과가 없다.
 
 계정 2FA 를 `auth-only` 로 낮추는 것도, 패키지 `mfa=none` 도 **해결책이 아니다.**
-이 두 경로로 시간을 버리지 마라.
+이 두 경로로 시간을 버리지 마라 — 0.2.0 때 그렇게 버렸다.
+
+### `E404 Not Found - PUT https://registry.npmjs.org/react-path-picker`
+
+**npm 은 권한 없음(403)을 404 로 숨긴다** — 패키지 존재를 노출하지 않으려고.
+인증은 됐는데 그 자격으로 이 패키지에 쓸 수 없다는 뜻이다.
+
+토큰 방식에서 이게 계속 났고, 결국 Trusted Publishing 으로 옮겨서 해결했다.
+토큰이 유효한지 따로 확인하려면 (토큰을 파일 밖으로 내보내지 않는다):
+
+```bash
+TMPRC=$(mktemp)
+printf '//registry.npmjs.org/:_authToken=%s\n' '<토큰>' > "$TMPRC"
+NPM_CONFIG_USERCONFIG="$TMPRC" npm access list packages
+rm "$TMPRC"
+```
+
+`react-path-picker: read-write` 가 나와야 정상이다.
+
+### `E401 Unauthorized - GET /-/whoami` (CI 안에서)
+
+granular access token 은 `whoami` 에 필요한 스코프가 없어 401 이 날 수 있다.
+**토큰이 죽었다는 뜻이 아니다.** 판정은 `publish` 응답으로 해라.
+
+### `EBADENGINE` — npm 12 가 안 깔린다
+
+```
+Required: {"node":"^22.22.2 || ^24.15.0 || >=26.0.0"}  Actual: {"node":"v20.20.2"}
+```
+
+`node-version` 을 24 로 올려라. npm 을 따로 설치할 필요가 없어진다.
 
 ### 버전을 이미 써버렸다
 
 npm 은 같은 버전 재업로드를 **영구히** 거절한다. 다음 patch 로 올려서 다시 낸다.
 
-배포 **전에** 실패했다면 그 번호는 아직 살아 있다. 태그만 물리면 된다:
+배포 **전에** 실패했다면 그 번호는 아직 살아 있다:
 
 ```bash
 git tag -d v0.3.0
-git reset --hard HEAD~1     # chore: release 커밋 취소
+git reset --hard HEAD~1            # chore: release 커밋 취소
+git push origin :refs/tags/v0.3.0  # 태그를 이미 밀었다면
 ```
-
-푸시까지 했다면:
-
-```bash
-git push origin :refs/tags/v0.3.0
-```
-
----
-
-## CI 로 배포하기
-
-`.github/workflows/release.yml` 이 `v*` 태그 푸시에 반응한다. **패키지 2FA 요구는 자동화 토큰과
-Trusted Publishing 으로 충족되므로, OTP 없이 배포되는 유일한 경로다.** provenance 서명도 붙는다.
-
-### 켜는 법
-
-세팅은 **npmjs.com 에서 하나, GitHub 에서 하나**다.
-
-#### npmjs.com — 토큰 발급
-
-프로필 사진(우상단) → **Access Tokens** → **Generate New Token** → **Granular Access Token**
-
-| 항목 | 값 |
-|---|---|
-| **Token name** | `github-actions-release` 처럼 용도가 보이는 이름 |
-| **Bypass two-factor authentication** | **체크한다** ← 안 켜면 CI 도 OTP 를 요구받아 실패한다 |
-| **Expiration** | 90일 이상. 짧으면 조용히 만료돼 다음 배포에서 또 막힌다 |
-| **Packages and scopes** → Permissions | **Read and write** |
-| **Packages and scopes** → Select Packages | **Only select packages and scopes** → `react-path-picker` |
-| **Organizations** → Permissions | **No access** (배포에 필요 없다) |
-
-**Generate Token** 을 누르면 토큰이 **딱 한 번** 보인다. 그 화면을 벗어나면 다시 못 본다.
-
-#### GitHub — 시크릿 등록
-
-```bash
-gh secret set NPM_TOKEN --repo kiboko-ai/react-path-picker
-# ? Paste your secret:  ← 여기에 붙여넣는다
-```
-
-웹으로 하려면: 저장소 → **Settings** → 좌측 **Secrets and variables** → **Actions**
-→ **New repository secret** → Name `NPM_TOKEN`, Secret 에 토큰 붙여넣기 → **Add secret**
-
-> **`gh secret set` 의 인자는 값이 아니라 이름이다.**
-> `gh secret set npm_abc123...` 처럼 토큰을 인자로 주면 **토큰이 시크릿 이름**이 되고,
-> 값은 비어버린다. 시크릿 **이름은 마스킹되지 않아서** GitHub UI·API 에 평문으로 노출된다.
-> 이렇게 만들었다면 즉시 지우고 토큰을 폐기해라:
-> ```bash
-> gh secret delete <잘못된-이름> --repo kiboko-ai/react-path-picker
-> ```
-
-확인:
-
-```bash
-gh secret list --repo kiboko-ai/react-path-picker   # NPM_TOKEN 이 보여야 한다
-```
-
-### 쓸 때
-
-```bash
-npm version 0.3.0 -m "chore: release %s"
-git push origin main
-git push origin v0.3.0        # ← 이 줄이 배포를 트리거한다
-gh run watch
-```
-
-워크플로 순서: 태그↔`package.json` 일치 → 이미 배포됐는지 → typecheck → test → build → publish.
-
-이미 올라간 버전이면 **실패가 아니라 publish 단계만 건너뛴다.** 손으로 먼저 배포하고 태그를
-나중에 붙여도 초록으로 끝난다. (`v0.1.9` 가 그 순서였고, 예전 가드는 `exit 1` 이라 빨간 X 로 남았다.)
-
-### 토큰 없이 (Trusted Publishing)
-
-npmjs.com 패키지 설정에서 이 저장소·워크플로를 신뢰하도록 등록하면 토큰 자체가 필요 없다.
-발급·보관·폐기할 것이 없어진다. 등록 후 `release.yml` 의 `NODE_AUTH_TOKEN` 줄을 지우면 된다
-(`id-token: write` 는 이미 있다).
 
 ---
 
 ## 토큰을 다룰 때
 
+Trusted Publishing 을 쓰면 토큰이 필요 없다. 그래도 어딘가에서 쓰게 된다면:
+
 - 토큰을 **채팅·이슈·커밋·파일에 붙여넣지 않는다.** 한 번 새어나가면 폐기 말고는 방법이 없다.
-- 넣을 때는 항상 **프롬프트에 붙여넣는 방식**을 쓴다 (`gh secret set NPM_TOKEN`,
-  `npm login --auth-type=web`). 명령행 인자로 주면 셸 히스토리에 남는다.
-- 노출됐다면: npmjs.com → **Access Tokens** → 해당 토큰 **Revoke** → 새로 발급.
+- `gh secret set` 의 **인자는 값이 아니라 이름이다.**
+
+  ```bash
+  gh secret set NPM_TOKEN --repo kiboko-ai/react-path-picker
+  #             ^^^^^^^^^ 이름. 글자 그대로 친다
+  # ? Paste your secret:  ← 토큰은 여기에 붙여넣는다 (가려진다)
+  ```
+
+  토큰을 인자로 주면 **토큰이 시크릿 이름**이 되고 값은 비어버린다. 시크릿 이름은
+  마스킹되지 않아 GitHub UI·API 에 평문으로 노출된다.
+- 파이프로 넣지 마라 (`echo "$T" | gh secret set ...`). 줄바꿈이 딸려 들어가 401 이 난다.
+- 노출됐다면: npmjs.com → **Access Tokens** → **Revoke** → 새로 발급.
