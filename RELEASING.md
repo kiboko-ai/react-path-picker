@@ -44,23 +44,29 @@ npm profile get | grep two-factor
 # two-factor auth: auth-and-writes  ← 이러면 publish 마다 OTP 를 묻는다
 ```
 
-### 2. 패키지 publish 요구사항
+### 2. 패키지 2FA 요구 — 끌 수 없다 (2026-08 확인)
 
-계정 설정과 **별개로** 패키지에 따로 걸린다. 계정이 `auth-only` 여도 이게 켜져 있으면 막힌다.
-
-npmjs.com → **react-path-picker** → **Settings** → **Publishing access**
-
-- `Require two-factor authentication and disallow tokens` → **이거면 CLI 배포가 막힌다**
-- `Two-factor authentication or automation tokens are required` → 토큰 배포는 되고 세션 배포는 막힐 수 있다
-- `No requirement` → 계정 설정만 따른다
-
-CLI 로 바꿀 수도 있다(이 명령 자체가 OTP 를 요구하면 웹에서 해야 한다):
+npm 이 **모든 패키지에 2FA 요구를 강제**한다. 끄려고 하면 거부당한다:
 
 ```bash
-npm access set mfa=none react-path-picker
+$ npm access set mfa=none react-path-picker
+npm error 403 Forbidden - POST https://registry.npmjs.org/-/package/react-path-picker/access
+npm error 403 Two factor authentication package setting is required on all packages.
 ```
 
-읽는 명령은 없다 (`npm access get mfa` 는 존재하지 않는다). 웹에서 눈으로 확인해야 한다.
+**여기서 따라오는 결론이 이 문서에서 제일 중요하다:**
+
+- 로컬 `npm publish` 는 **TOTP 6자리가 반드시 필요하다**
+- 보안키·패스키만 등록된 계정은 그 6자리를 만들 수 없다 → **CLI 직접 배포가 불가능하다**
+- 계정 2FA 를 `auth-only` 로 낮춰도 **이건 안 풀린다.** 패키지 정책이 따로 걸리기 때문이다.
+  (낮췄다면 되돌려라 — 배포에 도움이 안 되면서 계정 보안만 내려간다.)
+
+그래서 길은 둘뿐이다:
+
+| 방법 | 배포할 때 하는 일 | 비고 |
+|---|---|---|
+| **인증 앱(TOTP) 추가** | 매번 `--otp=<6자리>` 를 직접 친다 | 로컬 배포 유지 |
+| **CI 에서 배포** | 태그만 민다 | OTP 없음. [아래 참고](#ci-로-배포하기) |
 
 ### 3. 로그인 — 세션으로, 토큰 말고
 
@@ -156,11 +162,14 @@ publish 는 여전히 TOTP 6자리만 받는다.
 
 ### 보안키·패스키만 쓰는데 6자리가 없다
 
-`npm publish --otp=` 에 넣을 코드를 만들 방법이 없다. 둘 중 하나를 골라야 한다.
+`npm publish --otp=` 에 넣을 코드를 만들 방법이 없고, 패키지 2FA 요구는 끌 수 없다
+(위 [사전 준비 2](#2-패키지-2fa-요구--끌-수-없다-2026-08-확인)). 둘 중 하나를 골라야 한다.
 
-- 계정 2FA 를 `auth-only` 로 (위 [사전 준비 1](#1-계정-2fa--write-actions-해제))
-- 또는 npmjs.com 에서 **authenticator app 을 2FA 수단으로 추가** — `auth-and-writes` 를
-  유지할 수 있지만 배포할 때마다 코드를 쳐야 한다
+- npmjs.com → Account → Two-Factor Authentication → **authenticator app 추가**.
+  6자리가 생기니 `npm publish --access public --otp=<6자리>` 로 로컬 배포가 된다.
+- 또는 [CI 로 배포](#ci-로-배포하기). 태그만 밀면 되고 OTP 를 안 본다.
+
+계정 2FA 를 `auth-only` 로 낮추는 건 **해결책이 아니다.** 이 경로로 시간을 버리지 마라.
 
 ### 버전을 이미 써버렸다
 
@@ -181,10 +190,10 @@ git push origin :refs/tags/v0.3.0
 
 ---
 
-## CI 로 배포하기 (선택)
+## CI 로 배포하기
 
-`.github/workflows/release.yml` 이 `v*` 태그 푸시에 반응한다. 쓰면 **provenance 서명**이 붙고
-로컬 npm 인증이 필요 없어진다.
+`.github/workflows/release.yml` 이 `v*` 태그 푸시에 반응한다. **패키지 2FA 요구는 자동화 토큰과
+Trusted Publishing 으로 충족되므로, OTP 없이 배포되는 유일한 경로다.** provenance 서명도 붙는다.
 
 ### 켜는 법
 
