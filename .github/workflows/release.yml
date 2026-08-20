@@ -67,6 +67,14 @@ jobs:
       - name: Build
         run: npm run build
 
+      # publish 가 404 로 죽으면 npm 이 '권한 없음'을 숨긴 것이다(패키지 존재를 안 알리려고).
+      # 토큰이 누구로 인증되는지 먼저 찍어야 원인이 갈린다 — 사용자명만 나오고 토큰은 안 나온다.
+      - name: Token identity
+        if: steps.published.outputs.skip != 'true'
+        run: npm whoami
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
       # prepublishOnly 가 typecheck·test·build 를 한 번 더 돌린다. 위 단계는 어디서
       # 깨졌는지 로그로 바로 보이게 하려는 것.
       - name: Publish
