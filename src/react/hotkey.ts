@@ -79,13 +79,28 @@ export function matchesHotkey(e: KeyboardEvent, spec: string): boolean {
 
   if (/^[a-z]$/.test(key) && e.code === `Key${key.toUpperCase()}`) return true;
   if (/^[0-9]$/.test(key) && e.code === `Digit${key}`) return true;
-  return e.key.toLowerCase() === key;
+  return eventKey(e) === key;
 }
 
 function matchesTapKey(e: KeyboardEvent, key: string, mod: string | null): boolean {
-  if (mod) return e.key.toLowerCase() === MODIFIER_EVENT_KEY[mod];
+  if (mod) return eventKey(e) === MODIFIER_EVENT_KEY[mod];
   if (/^[a-z]$/.test(key) && e.code === `Key${key.toUpperCase()}`) return true;
-  return e.key.toLowerCase() === key;
+  return eventKey(e) === key;
+}
+
+/**
+ * `e.key` 는 항상 오지 않는다.
+ *
+ * 비밀번호 관리자의 자동완성, IME 조합, 확장프로그램이 쏘는 합성 KeyboardEvent 에는
+ * key 가 비어 있다. 그런데 기본 핫키가 «shift shift»(더블탭)이라 matchesTapKey 가
+ * **window 의 모든 keydown** 에서 돌고, 거기서 `e.key.toLowerCase()` 를 그대로 부르면
+ * 라이브러리가 호스트 앱의 페이지를 통째로 죽인다 — 실제로 로그인 폼에 타이핑하는 것만으로
+ * "Cannot read properties of undefined (reading 'toLowerCase')" 가 났다.
+ *
+ * 개발 도구는 어떤 경우에도 호스트 앱을 죽여선 안 된다. key 가 없으면 «안 맞는다» 로 본다.
+ */
+function eventKey(e: KeyboardEvent): string {
+  return typeof e.key === 'string' ? e.key.toLowerCase() : '';
 }
 
 /** 대상 수식키 말고 다른 수식키가 눌려 있으면 더블탭으로 안 친다. */

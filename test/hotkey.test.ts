@@ -186,3 +186,37 @@ describe('describeHotkey', () => {
     expect(describeHotkey(false)).toBe(null);
   });
 });
+
+describe('key 가 없는 이벤트 (자동완성·IME·합성 이벤트)', () => {
+  // 라이브러리가 호스트 앱을 죽인 실제 사고. 기본 핫키 «shift shift» 의 매처가 window 의
+  // 모든 keydown 에서 돌기 때문에, key 없는 이벤트 하나면 로그인 폼 타이핑만으로 페이지가 죽었다.
+  const keyless = (opts: Partial<KeyboardEvent> = {}) =>
+    ({ code: '', repeat: false, altKey: false, ctrlKey: false, metaKey: false, shiftKey: false, ...opts }) as KeyboardEvent;
+
+  it('matchesHotkey 가 던지지 않는다', () => {
+    expect(() => matchesHotkey(keyless(), 'shift+z')).not.toThrow();
+    expect(matchesHotkey(keyless({ shiftKey: true }), 'shift+z')).toBe(false);
+  });
+
+  it('더블탭 매처가 던지지 않는다', () => {
+    const m = createHotkeyMatcher(['shift shift'], now);
+    expect(() => m.onKeyDown(keyless({ shiftKey: true }))).not.toThrow();
+    expect(m.onKeyDown(keyless({ shiftKey: true }))).toBe(null);
+    expect(() => m.onKeyUp(keyless())).not.toThrow();
+  });
+
+  it('key 가 없어도 code 로 맞출 수 있으면 맞춘다', () => {
+    expect(matchesHotkey(keyless({ altKey: true, code: 'KeyP' }), 'alt+p')).toBe(true);
+  });
+
+  it('key 없는 이벤트는 «다른 키» 와 같게 취급해 더블탭을 초기화한다', () => {
+    // 특별대우하지 않는다 — 정체를 모르는 이벤트는 «다른 키를 눌렀다» 로 보는 편이
+    // 예측 가능하고, 의도치 않은 arm 보다 낫다. 던지지만 않으면 된다.
+    const m = createHotkeyMatcher(['shift shift'], now);
+    expect(m.onKeyDown(shiftDown())).toBe(null);
+    m.onKeyUp(shiftUp());
+    m.onKeyDown(keyless()); // 중간에 끼어든 자동완성 이벤트
+    clock += 100;
+    expect(m.onKeyDown(shiftDown())).toBe(null);
+  });
+});
